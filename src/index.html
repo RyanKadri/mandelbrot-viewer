@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="./styles.css">
+    </head>
+    <body>
+        <h1>Mandelbrot Set</h1>
+        <canvas id="plot" height="640" width="640"></canvas>
+        <form id="viewport-form">
+            <label>
+                Min Real
+                <input type="number" id="min-real" step="0.01">
+            </label>
+            <label>
+                Max Real
+                <input type="number" id="max-real" step="0.01">
+            </label>
+            <label>
+                Min Imaginary
+                <input type="number" id="min-imag" step="0.01">
+            </label>
+            <label>
+                Max Imaginary
+                <input type="number" id="max-imag" step="0.01">
+            </label>
+            <button type="submit">Redraw</button>
+        </form>
+        <script src="./index.ts"></script>
+    </body>
+</html>

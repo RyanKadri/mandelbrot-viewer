@@ -1,5 +1,3 @@
-import { z, Complex, mult, absSq, add } from "./complex";
-
 export function plotSet(ctx: CanvasRenderingContext2D, plot: PlotBounds, viewport: ViewportBounds, options: PlotOptions) {
     const { minReal, maxReal, minImag, maxImag } = plot;
     const { height, width } = viewport;
@@ -11,8 +9,7 @@ export function plotSet(ctx: CanvasRenderingContext2D, plot: PlotBounds, viewpor
         for(let realStep = 0; realStep < width; realStep ++) {
             const imagComp = maxImag - imagStep * imagInc;
             const realComp = minReal + realStep * realInc;
-            const zInit = z(realComp, imagComp);
-            const iterations = iterateMandlebrot(zInit, options);
+            const iterations = iterateMandlebrot(realComp, imagComp, options);
             drawPixel(img, realStep, imagStep, iterations, viewport, options);
         }
     }
@@ -21,12 +18,15 @@ export function plotSet(ctx: CanvasRenderingContext2D, plot: PlotBounds, viewpor
     
 }
 
-function iterateMandlebrot(coord: Complex, options: PlotOptions): number {
-    let zn = z(0,0);
+function iterateMandlebrot(realComp: number, imagComp: number, options: PlotOptions): number {
     const { maxIterations, divergenceBound } = options;
+    const div2 = divergenceBound ** 2;
+    let real = 0, imag = 0;
     for(let n = 0; n < maxIterations; n++) {
-        zn = add(mult(zn,zn), coord);
-        if(absSq(zn) > divergenceBound) {
+        let newReal = real * real - imag * imag + realComp
+        imag = 2 * imag * real + imagComp;
+        real = newReal;
+        if(real ** 2 + imag ** 2 > div2) {
             return n;
         }
     }

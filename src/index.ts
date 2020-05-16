@@ -12,7 +12,7 @@ const ctx = canvas.getContext("2d")!;
 
 const plotOptions: PlotOptions = {
     maxIterations: 200,
-    divergenceBound: 4
+    divergenceBound: 2
 }
 
 const viewport: ViewportBounds = {
@@ -24,10 +24,10 @@ canvas.height = viewport.height;
 canvas.width = viewport.width;
 
 let plotBounds: PlotBounds = {
-    minReal: -1,
-    maxReal: -0.5,
-    minImag: 0,
-    maxImag: 0.5
+    minReal: -2,
+    maxReal: 0.5,
+    minImag: -1.25,
+    maxImag: 1.25
 };
 
 viewportForm.addEventListener("submit", (e) => {
@@ -38,6 +38,7 @@ viewportForm.addEventListener("submit", (e) => {
         minImag: minImagInput.valueAsNumber,
         maxImag: maxImagInput.valueAsNumber
     };
+    refreshPlot()
 });
 
 function refreshPlot() {

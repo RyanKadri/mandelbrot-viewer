@@ -15,6 +15,7 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
         };
         console.log(`Dragged from ${ printPoint(dragStart!) } to ${ printPoint(end) }`)
         dragStart = null;
+        lastPoint = null;
         cbs.onDragComplete();
     });
     canvas.addEventListener("mousemove", e => {

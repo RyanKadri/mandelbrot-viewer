@@ -1,21 +1,44 @@
+let plotImage: ImageData;
+
 export function plotSet(ctx: CanvasRenderingContext2D, plot: PlotBounds, viewport: ViewportBounds, options: PlotOptions) {
     const { minReal, maxReal, minImag, maxImag } = plot;
-    const { height, width } = viewport;
+    const { height, width, startImag = 0, endImag = height, startReal = 0, endReal = width } = viewport;
 
     const realInc = (maxReal - minReal) / width;
     const imagInc = (maxImag - minImag) / height;
-    const img = ctx.createImageData(width, height);
-    for(let imagStep = 0; imagStep < height; imagStep ++) {
-        for(let realStep = 0; realStep < width; realStep ++) {
+    if(!plotImage || plotImage.height !== viewport.height || plotImage.width !== viewport.width) {
+        plotImage = ctx.createImageData(width, height);
+    }
+    for(let imagStep = startImag; imagStep < endImag; imagStep ++) {
+        for(let realStep = startReal; realStep < endReal; realStep ++) {
             const imagComp = maxImag - imagStep * imagInc;
             const realComp = minReal + realStep * realInc;
             const iterations = iterateMandlebrot(realComp, imagComp, options);
-            drawPixel(img, realStep, imagStep, iterations, viewport, options);
+            drawPixel(plotImage, realStep, imagStep, iterations, viewport, options);
         }
     }
-    ctx.putImageData(img, 0, 0);
+    ctx.putImageData(plotImage, 0, 0);
     drawAxes(ctx, plot, viewport, options)
+}
+
+export function shiftPlot(ctx: CanvasRenderingContext2D, moveReal: number, moveImag: number) {
+    const height = plotImage.height;
+    const width = plotImage.width;
+    const newPlot = ctx.createImageData(width, height);
+    const maxInd = width * height * 4;
+    for(let imagStep = 0; imagStep < height; imagStep++) {
+        for(let realStep = 0; realStep < width; realStep++) {
+            const ind = (realStep + imagStep * width) * 4;
+            const oldInd = ind - moveReal * 4 - width * moveImag * 4;
+            if(oldInd < 0 || oldInd > maxInd) continue;
+            for(let i = 0; i < 4; i++) {
+                newPlot.data[ind + i] = plotImage.data[oldInd + i];
+            }
+        }
+    }
+    ctx.putImageData(newPlot, 0, 0);
     
+    plotImage = newPlot;
 }
 
 function iterateMandlebrot(realComp: number, imagComp: number, options: PlotOptions): number {
@@ -74,6 +97,10 @@ export interface PlotBounds {
 export interface ViewportBounds {
     height: number;
     width: number;
+    startReal?: number;
+    endReal?: number;
+    startImag?: number;
+    endImag?: number;
 }
 
 export interface PlotOptions {

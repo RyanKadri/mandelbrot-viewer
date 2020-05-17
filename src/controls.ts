@@ -28,7 +28,12 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
                 y: e.clientY
             }
         }
-    })
+    });
+    canvas.addEventListener("wheel", e => {
+        e.preventDefault();
+        console.log(e)
+        cbs.onZoom(e.deltaY < 0 ? 0.9 : 1.1, { x: e.offsetX, y: e.offsetY });
+    });
 }
 
 function printPoint(p: Point) {
@@ -43,4 +48,5 @@ interface Point {
 export interface PlotCallbacks {
     onDragUpdate(moveX: number, moveY: number): void;
     onDragComplete(): void;
+    onZoom(zoomAmount: number, zoomCenter: Point): void;
 }

@@ -4,7 +4,9 @@
     </head>
     <body>
         <h1>Mandelbrot Set</h1>
-        <canvas id="plot" height="640" width="640"></canvas>
+        <div id="plot-bounds">
+            <canvas id="plot"></canvas>
+        </div>
         <form id="viewport-form">
             <label>
                 Min Real
@@ -24,6 +26,5 @@
             </label>
             <button type="submit">Redraw</button>
         </form>
-        <script src="./index.ts"></script>
     </body>
 </html>

@@ -1,0 +1,8 @@
+#plot {
+    border: solid 1px #ccc;
+    box-sizing: border-box;
+}
+
+#plot-bounds {
+    overflow: hidden;
+}

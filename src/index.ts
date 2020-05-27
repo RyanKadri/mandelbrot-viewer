@@ -1,27 +1,29 @@
-import { PlotBounds, PlotOptions, plotSet, ViewportBounds, shiftPlot } from "./plot";
+import { PlotBounds, PlotOptions, ViewportBounds } from "./plot";
 import { setupPlotListeners } from "./controls";
 
+
 const canvas = document.getElementById("plot") as HTMLCanvasElement;
+const canvasBounds = document.getElementById("plot-bounds") as HTMLCanvasElement;
 const minRealInput = document.getElementById("min-real") as HTMLInputElement;
 const maxRealInput = document.getElementById("max-real") as HTMLInputElement;
 const minImagInput = document.getElementById("min-imag") as HTMLInputElement;
 const maxImagInput = document.getElementById("max-imag") as HTMLInputElement;
 const viewportForm = document.getElementById("viewport-form") as HTMLFormElement;
 
-const ctx = canvas.getContext("2d")!;
-
 const plotOptions: PlotOptions = {
-    maxIterations: 200,
+    maxIterations: 50,
     divergenceBound: 2
 }
 
 const viewport: ViewportBounds = {
-    height: 640,
-    width: 640
+    height: 960,
+    width: 960,
 }
 
 canvas.height = viewport.height;
 canvas.width = viewport.width;
+canvasBounds.style.height = `${viewport.height / 1.5}px`;
+canvasBounds.style.width = `${viewport.width / 1.5}px`;
 
 let plotBounds: PlotBounds = {
     minReal: -1,
@@ -29,6 +31,15 @@ let plotBounds: PlotBounds = {
     minImag: 0,
     maxImag: 0.5
 };
+
+const initTranslateX = -viewport.width / 1.5 / 4;
+const initTranslateY = -viewport.height / 1.5 / 4;
+
+let transform = {
+    translateX: initTranslateX,
+    translateY: initTranslateY,
+    scale: 1
+}
 
 viewportForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -41,8 +52,25 @@ viewportForm.addEventListener("submit", (e) => {
     refreshPlot()
 });
 
+const renderWorker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
+const offscreenCanvas = canvas.transferControlToOffscreen();
+
 function refreshPlot() {
-    plotSet(ctx, plotBounds, viewport, plotOptions);
+    if(transform.translateX !== initTranslateX || transform.translateY !== initTranslateY) {
+        const moveReal = -(transform.translateX - initTranslateX);
+        const moveImag = (transform.translateY - initTranslateY);
+        renderWorker.postMessage({
+            type: "shift",
+            moveReal,
+            moveImag
+        });
+    }
+    renderWorker.postMessage({ 
+        type: "plot", 
+        plotBounds, 
+        viewport, 
+        plotOptions
+    });
 }
 
 function updateBoundsInputs() {
@@ -52,8 +80,10 @@ function updateBoundsInputs() {
     maxImagInput.value = "" + plotBounds.maxImag;
 }
 
-updateBoundsInputs();
-refreshPlot();
+function updateTransform() {
+    canvas.style.transform = `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
+}
+
 setupPlotListeners(canvas, {
     onDragUpdate(moveReal, moveImag) {
         const realRange = plotBounds.maxReal - plotBounds.minReal;
@@ -67,18 +97,29 @@ setupPlotListeners(canvas, {
             maxImag: plotBounds.maxImag + imagMoveProp
         }
         updateBoundsInputs();
-        shiftPlot(ctx, moveReal, moveImag);
-        plotSet(ctx, plotBounds, {
-            ...viewport, 
-            startReal: moveReal > 0 ? 0 : viewport.width + moveReal,
-            endReal: moveReal > 0 ? moveReal : viewport.width
-        }, plotOptions);
+        transform.translateX += moveReal;
+        transform.translateY += moveImag;
+        updateTransform();
 
-        plotSet(ctx, plotBounds, {
-            ...viewport, 
-            startImag: moveImag > 0 ? 0 : viewport.height + moveImag,
-            endImag: moveImag > 0 ? moveImag : viewport.height
-        }, plotOptions)
+        // renderWorker.postMessage({ type: "shift", moveReal, moveImag });
+        // renderWorker.postMessage({ 
+        //     type: "plot", 
+        //     plotBounds, 
+        //     plotOptions, 
+        //     viewport: { ...viewport,
+        //         startReal: moveReal > 0 ? 0 : viewport.width + moveReal,
+        //         endReal: moveReal > 0 ? moveReal : viewport.width
+        //     }
+        // });
+        // renderWorker.postMessage({
+        //     type: "plot", 
+        //     plotBounds, 
+        //     plotOptions, 
+        //     viewport: { ...viewport,
+        //         startImag: moveImag > 0 ? 0 : viewport.height + moveImag,
+        //         endImag: moveImag > 0 ? moveImag : viewport.height
+        //     },
+        // })
     },
     onDragComplete() {
         refreshPlot();
@@ -104,3 +145,22 @@ setupPlotListeners(canvas, {
         refreshPlot();
     }
 });
+
+renderWorker.addEventListener("message", e => {
+    switch(e.data.type) {
+        case "shift-done":
+            transform.translateX = initTranslateX;
+            transform.translateY = initTranslateY;
+            updateTransform();
+            break;
+        case "ready":
+            renderWorker.postMessage({
+                type: "initialize",
+                canvas: offscreenCanvas
+            }, [ offscreenCanvas ]);
+            updateBoundsInputs();
+            updateTransform();
+            refreshPlot();
+            break;            
+    }
+})

@@ -3,28 +3,50 @@
         <link rel="stylesheet" href="./styles.css">
     </head>
     <body>
-        <h1>Mandelbrot Set</h1>
-        <div id="plot-bounds">
-            <canvas id="plot"></canvas>
+        <div class="container">
+            <h1>Mandelbrot Set</h1>
+            <div id="plot-bounds">
+                <canvas id="plot"></canvas>
+                <canvas id="worker-plot"></canvas>
+            </div>
+            <form id="viewport-form">
+                <label>
+                    Min Real
+                    <input type="text" id="min-real">
+                </label>
+                <label>
+                    Max Real
+                    <input type="text" id="max-real">
+                </label>
+                <label>
+                    Min Imaginary
+                    <input type="text" id="min-imag">
+                </label>
+                <label>
+                    Max Imaginary
+                    <input type="text" id="max-imag">
+                </label>
+                <label>
+                    Calculate on worker thread
+                    <input type="checkbox" id="main-thread">
+                </label>
+                <label>
+                    Number of iterations
+                    <input type="number" min="1" max="500" id="iteration-count">
+                </label>
+                <label>
+                    Divergence Bound
+                    <input type="text" id="divergence-bound">
+                </label>
+                <label>
+                    Calculation Method
+                    <select id="calculation-type">
+                        <option value="vanilla-js">Plain JS</option>
+                        <option value="wasm-single">Single-Threaded WASM</option>
+                    </select>
+                </label>
+                <button type="submit">Redraw</button>
         </div>
-        <form id="viewport-form">
-            <label>
-                Min Real
-                <input type="text" id="min-real">
-            </label>
-            <label>
-                Max Real
-                <input type="text" id="max-real">
-            </label>
-            <label>
-                Min Imaginary
-                <input type="text" id="min-imag">
-            </label>
-            <label>
-                Max Imaginary
-                <input type="text" id="max-imag">
-            </label>
-            <button type="submit">Redraw</button>
         </form>
     </body>
 </html>

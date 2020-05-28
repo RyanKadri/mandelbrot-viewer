@@ -7,7 +7,7 @@ const path = require('path');
 
 module.exports = {
   entry: {
-    main: "./src/index.ts",
+    main: "./src/bootstrap.ts",
   },
   module: {
     rules: [

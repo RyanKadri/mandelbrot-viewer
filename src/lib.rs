@@ -1,5 +1,4 @@
 extern crate web_sys;
-use web_sys::console;
 
 use wasm_bindgen::prelude::*;
 
@@ -8,24 +7,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-pub struct Timer<'a> {
-    name: &'a str,
-}
-
-impl<'a> Timer<'a> {
-    pub fn new(name: &'a str) -> Timer<'a> {
-        console::time_with_label(name);
-        Timer { name }
-    }
-}
-
-impl<'a> Drop for Timer<'a> {
-    fn drop(&mut self) {
-        console::time_end_with_label(self.name);
-    }
-}
-
 
 #[wasm_bindgen]
 pub struct Plot {
@@ -45,7 +26,6 @@ pub struct Plot {
 #[wasm_bindgen]
 impl Plot {
     pub fn calc_pixels(&mut self) {
-        let _timer = Timer::new("calc_pixels");
         let mut index = 0;
 
         let real_range = self.max_real - self.min_real;

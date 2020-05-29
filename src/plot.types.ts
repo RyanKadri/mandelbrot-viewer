@@ -8,10 +8,8 @@ export interface PlotBounds {
 export interface ViewportBounds {
     height: number;
     width: number;
-    startReal?: number;
-    endReal?: number;
-    startImag?: number;
-    endImag?: number;
+    chunkSize: number;
+    renderDistBuffer: number;
 }
 
 export interface PlotOptions {

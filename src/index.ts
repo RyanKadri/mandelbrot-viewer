@@ -1,6 +1,27 @@
 import { setupPlotListeners } from "./controls";
-import { plotSet } from "./plot";
+import { plotSet, initialize, shiftPlot } from "./plot";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
+
+let plotOptions: PlotOptions = {
+    maxIterations: 100,
+    divergenceBound: 4,
+    calcMethod: "vanilla-js",
+    useWebWorker: true,
+};
+
+const viewport: ViewportBounds = {
+    height: 640,
+    width: 640,
+    chunkSize: 320,
+    renderDistBuffer: 160,
+};
+
+let plotBounds: PlotBounds = {
+    minReal: -1,
+    maxReal: -0.5,
+    minImag: 0,
+    maxImag: 0.5
+};
 
 // Some of these names could be better but I noticed they were all the same width too late to stop.
 const mainThCanvas = document.getElementById("plot") as HTMLCanvasElement;
@@ -16,38 +37,10 @@ const calcSelector = document.getElementById("calculation-type") as HTMLInputEle
 const numIterInput = document.getElementById("iteration-count") as HTMLInputElement;
 const viewportForm = document.getElementById("viewport-form") as HTMLFormElement;
 
-let plotOptions: PlotOptions = {
-    maxIterations: 100,
-    divergenceBound: 4,
-    calcMethod: "vanilla-js",
-    useWebWorker: true,
-};
-
-const viewport: ViewportBounds = {
-    height: 960,
-    width: 960,
-}
-
-let plotBounds: PlotBounds = {
-    minReal: -1,
-    maxReal: -0.5,
-    minImag: 0,
-    maxImag: 0.5
-};
-
 mainThCanvas.height = workerCanvas.height = viewport.height;
 mainThCanvas.width = workerCanvas.width = viewport.width;
-canvasBounds.style.height = `${viewport.height / 1.5}px`;
-canvasBounds.style.width = `${viewport.width / 1.5}px`;
-
-const initTranslateX = -viewport.width / 1.5 / 4;
-const initTranslateY = -viewport.height / 1.5 / 4;
-
-let transform = {
-    translateX: initTranslateX,
-    translateY: initTranslateY,
-    scale: 1
-}
+canvasBounds.style.height = `${viewport.height}px`;
+canvasBounds.style.width = `${viewport.width}px`;
 
 const renderWorker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
 
@@ -69,7 +62,7 @@ function refreshPlot() {
     if(!plotOptions.useWebWorker) {
         mainThCanvas.style.display = "";
         workerCanvas.style.display = "none";
-
+        initialize(viewport)
         plotSet(mainThreadContext!, plotBounds, viewport, plotOptions);
     } else {
         mainThCanvas.style.display = "none";
@@ -81,6 +74,18 @@ function refreshPlot() {
             viewport, 
             plotOptions
         });
+    }
+}
+
+function handleShift(moveReal: number, moveImag: number) {
+    if(!plotOptions.useWebWorker) {
+        shiftPlot(mainThreadContext!, moveReal, moveImag)
+    } else {
+        renderWorker.postMessage({
+            type: "shift",
+            shiftX: moveReal,
+            shiftY: moveImag
+        })
     }
 }
 
@@ -98,11 +103,6 @@ function updatePlotOptions() {
     calcSelector.value = plotOptions.calcMethod
 }
 
-function updateTransform() {
-    mainThCanvas.style.transform = workerCanvas.style.transform =
-        `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
-}
-
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
     onDragUpdate(moveReal, moveImag) {
         const realRange = plotBounds.maxReal - plotBounds.minReal;
@@ -116,9 +116,7 @@ function updateTransform() {
             maxImag: plotBounds.maxImag + imagMoveProp
         }
         updateBoundsInputs();
-        transform.translateX += moveReal;
-        transform.translateY += moveImag;
-        updateTransform();
+        handleShift(moveReal, moveImag);
     },
     onDragComplete() {
         // refreshPlot();
@@ -170,7 +168,6 @@ renderWorker.addEventListener("message", e => {
                     type: "initialize",
                     canvas: offscreenCanvas
                 }, [ offscreenCanvas ]);
-                updateTransform();
                 refreshPlot();
                 break;            
             }

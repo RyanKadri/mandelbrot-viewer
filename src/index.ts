@@ -75,15 +75,6 @@ function refreshPlot() {
         mainThCanvas.style.display = "none";
         workerCanvas.style.display = "";
 
-        if(transform.translateX !== initTranslateX || transform.translateY !== initTranslateY) {
-            const moveReal = -(transform.translateX - initTranslateX);
-            const moveImag = (transform.translateY - initTranslateY);
-            renderWorker.postMessage({
-                type: "shift",
-                moveReal,
-                moveImag
-            });
-        }
         renderWorker.postMessage({ 
             type: "plot", 
             plotBounds, 
@@ -130,7 +121,7 @@ function updateTransform() {
         updateTransform();
     },
     onDragComplete() {
-        refreshPlot();
+        // refreshPlot();
     },
     onZoom(diff, center) {
         const oldRealRange = plotBounds.maxReal - plotBounds.minReal;
@@ -173,11 +164,6 @@ viewportForm.addEventListener("submit", (e) => {
 
 renderWorker.addEventListener("message", e => {
     switch(e.data.type) {
-        case "shift-done":
-            transform.translateX = initTranslateX;
-            transform.translateY = initTranslateY;
-            updateTransform();
-            break;
         case "ready":
             if(offscreenCanvas) {
                 renderWorker.postMessage({

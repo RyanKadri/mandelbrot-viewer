@@ -93,24 +93,3 @@ function drawPixel(img: ImageData, realComp: number, imagComp: number, iteration
         img.data[ind + 3] = 255;
     }
 }
-
-export function shiftPlot(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, moveReal: number, moveImag: number) {
-    const height = plotImage.height;
-    const width = plotImage.width;
-    const newPlot = ctx.createImageData(width, height);
-    const maxInd = width * height * 4;
-    for(let imagStep = 0; imagStep < height; imagStep++) {
-        for(let realStep = 0; realStep < width; realStep++) {
-            const ind = (realStep + imagStep * width) * 4;
-            const oldInd = ind - moveReal * 4 - width * moveImag * 4;
-            if(oldInd < 0 || oldInd > maxInd) continue;
-            for(let i = 0; i < 4; i++) {
-                newPlot.data[ind + i] = plotImage.data[oldInd + i];
-            }
-        }
-    }
-    ctx.putImageData(newPlot, 0, 0);
-    
-    plotImage = newPlot;
-    postMessage({ type: "shift-done" })
-}

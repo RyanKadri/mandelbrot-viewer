@@ -27,6 +27,7 @@ module.exports = {
     globalObject: "self"
   },
   mode: "development",
+  devtool: "source-map",
   plugins: [
     new WorkerPlugin(),
     new CopyWebpackPlugin({ 

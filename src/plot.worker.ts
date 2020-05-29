@@ -1,4 +1,4 @@
-import { plotSet, shiftPlot } from "./plot";
+import { plotSet } from "./plot";
 
 let ctx: OffscreenCanvasRenderingContext2D;
 
@@ -12,10 +12,6 @@ globalThis.addEventListener("message", e => {
         case "plot":
             const { plotBounds, viewport, plotOptions } = e.data;
             plotSet(ctx, plotBounds, viewport, plotOptions)
-            break;
-        case "shift":
-            const { moveReal, moveImag } = e.data;
-            shiftPlot(ctx, moveReal, moveImag);
             break;
     }
 });

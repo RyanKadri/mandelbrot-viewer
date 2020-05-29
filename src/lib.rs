@@ -1,6 +1,7 @@
 extern crate web_sys;
 
 use wasm_bindgen::prelude::*;
+mod calculator;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -20,7 +21,18 @@ pub struct Plot {
 
     max_iterations: u32,
     divergence_bound: f64,
-    pixels: Vec<u8>,
+    pixels: Vec<u32>,
+}
+
+pub fn set_panic_hook() {
+    // When the `console_error_panic_hook` feature is enabled, we can call the
+    // `set_panic_hook` function at least once during initialization, and then
+    // we will get better error messages if our code ever panics.
+    //
+    // For more details see
+    // https://github.com/rustwasm/console_error_panic_hook#readme
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
 }
 
 #[wasm_bindgen]
@@ -41,13 +53,14 @@ impl Plot {
                 let iterations = self.iterate_mandelbrot(real_start, imag_start);
                 self.draw_pixel(index, iterations);
                 
-                index += 4;
+                index += 1;
             }
         }
     }
     
     pub fn new(pixel_width: u32, pixel_height: u32, min_real: f64, max_real: f64, min_imag: f64, max_imag: f64, max_iterations: u32, divergence_bound: f64) -> Plot {
-        let num_pixels = pixel_width * pixel_height * 4;
+        calculator::utils::set_panic_hook();
+        let num_pixels = pixel_width * pixel_height;
         let pixels = vec![0; num_pixels as usize];
         Plot {
             pixel_width,
@@ -62,22 +75,18 @@ impl Plot {
         }
     }
 
-    pub fn pixels(&self) -> *const u8 {
+    pub fn pixels(&self) -> *const u32 {
         self.pixels.as_ptr()
     }
     
     fn draw_pixel(&mut self, index: usize, iterations: u32) {
-        if iterations < self.max_iterations {
-            self.pixels[index] = 0;
-            self.pixels[index + 1] = 0;
-            self.pixels[index + 2] = std::cmp::min::<u32>(128 + iterations, 255) as u8;
-            self.pixels[index + 3] = 255
+        let channels: [u8; 4] = if iterations < self.max_iterations {
+            let blue = std::cmp::min::<u32>(128 + iterations, 255) as u8;
+            [0, 0, blue, 255]
         } else {
-            self.pixels[index] = 0;
-            self.pixels[index + 1] = 0;
-            self.pixels[index + 2] = 0;
-            self.pixels[index + 3] = 255;
-        }
+            [0, 0, 0, 255]
+        };
+        self.pixels[index] = u32::from_le_bytes(channels);
     }
 
     fn iterate_mandelbrot(&self, real_start: f64, imag_start: f64) -> u32 {

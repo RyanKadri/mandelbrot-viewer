@@ -1,5 +1,5 @@
 import { setupPlotListeners } from "./controls";
-import { plotSet, initialize, shiftPlot } from "./plot";
+// import { plotSet, initialize, shiftPlot } from "./plot";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 
 let plotOptions: PlotOptions = {
@@ -13,14 +13,14 @@ const viewport: ViewportBounds = {
     height: 640,
     width: 640,
     chunkSize: 320,
-    renderDistBuffer: 160,
+    renderDistBuffer: 100,
 };
 
 let plotBounds: PlotBounds = {
     minReal: -1,
-    maxReal: -0.5,
+    realRange: 0.5,
     minImag: 0,
-    maxImag: 0.5
+    imagRange: 0.5
 };
 
 // Some of these names could be better but I noticed they were all the same width too late to stop.
@@ -28,9 +28,9 @@ const mainThCanvas = document.getElementById("plot") as HTMLCanvasElement;
 const workerCanvas = document.getElementById("worker-plot") as HTMLCanvasElement;
 const canvasBounds = document.getElementById("plot-bounds") as HTMLCanvasElement;
 const minRealInput = document.getElementById("min-real") as HTMLInputElement;
-const maxRealInput = document.getElementById("max-real") as HTMLInputElement;
+const realRngInput = document.getElementById("real-range") as HTMLInputElement;
 const minImagInput = document.getElementById("min-imag") as HTMLInputElement;
-const maxImagInput = document.getElementById("max-imag") as HTMLInputElement;
+const imagRngInput = document.getElementById("imag-range") as HTMLInputElement;
 const useWorkerBox = document.getElementById("main-thread") as HTMLInputElement;
 const divergeInput = document.getElementById("divergence-bound") as HTMLInputElement;
 const calcSelector = document.getElementById("calculation-type") as HTMLInputElement;
@@ -53,7 +53,7 @@ try {
     useWorkerBox.disabled = true;
 }
 
-const mainThreadContext = mainThCanvas.getContext("2d");
+// const mainThreadContext = mainThCanvas.getContext("2d");
 
 updatePlotOptions();
 updateBoundsInputs();
@@ -62,8 +62,8 @@ function refreshPlot() {
     if(!plotOptions.useWebWorker) {
         mainThCanvas.style.display = "";
         workerCanvas.style.display = "none";
-        initialize(viewport)
-        plotSet(mainThreadContext!, plotBounds, viewport, plotOptions);
+        // initialize(viewport)
+        // plotSet(mainThreadContext!, plotBounds, viewport, plotOptions);
     } else {
         mainThCanvas.style.display = "none";
         workerCanvas.style.display = "";
@@ -77,23 +77,25 @@ function refreshPlot() {
     }
 }
 
-function handleShift(moveReal: number, moveImag: number) {
+function handleShift(shiftX: number, shiftY: number, shiftReal: number, shiftImag: number) {
     if(!plotOptions.useWebWorker) {
-        shiftPlot(mainThreadContext!, moveReal, moveImag)
+        // shiftPlot(mainThreadContext!, moveReal, moveImag)
     } else {
         renderWorker.postMessage({
             type: "shift",
-            shiftX: moveReal,
-            shiftY: moveImag
+            shiftX,
+            shiftY,
+            shiftReal,
+            shiftImag
         })
     }
 }
 
 function updateBoundsInputs() {
     minRealInput.value = "" + plotBounds.minReal;
-    maxRealInput.value = "" + plotBounds.maxReal;
+    realRngInput.value = "" + plotBounds.realRange;
     minImagInput.value = "" + plotBounds.minImag;
-    maxImagInput.value = "" + plotBounds.maxImag;
+    imagRngInput.value = "" + plotBounds.imagRange;
 }
 
 function updatePlotOptions() {
@@ -104,39 +106,34 @@ function updatePlotOptions() {
 }
 
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
-    onDragUpdate(moveReal, moveImag) {
-        const realRange = plotBounds.maxReal - plotBounds.minReal;
-        const imagRange = plotBounds.maxImag - plotBounds.minImag;
-        const realMoveProp = (moveReal / viewport.width) * realRange;
-        const imagMoveProp = (moveImag / viewport.height) * imagRange;
+    onDragUpdate(moveX, moveY) {
+        const moveReal = (moveX / viewport.width) * plotBounds.realRange;
+        const moveImag = (moveY / viewport.height) * plotBounds.imagRange;
         plotBounds = {
-            minReal: plotBounds.minReal - realMoveProp,
-            maxReal: plotBounds.maxReal - realMoveProp,
-            minImag: plotBounds.minImag + imagMoveProp,
-            maxImag: plotBounds.maxImag + imagMoveProp
+            ...plotBounds,
+            minReal: plotBounds.minReal - moveReal,
+            minImag: plotBounds.minImag + moveImag,
         }
         updateBoundsInputs();
-        handleShift(moveReal, moveImag);
+        handleShift(moveX, moveY, moveReal, moveImag);
     },
     onDragComplete() {
         // refreshPlot();
     },
     onZoom(diff, center) {
-        const oldRealRange = plotBounds.maxReal - plotBounds.minReal;
-        const oldImagRange = plotBounds.maxImag - plotBounds.minImag;
+        const oldRealRange = plotBounds.realRange;
+        const oldImagRange = plotBounds.imagRange;
         const currRealRange = oldRealRange * diff;
         const currImagRange = oldImagRange * diff;
         const oldCenterReal = center.x / viewport.width * oldRealRange + plotBounds.minReal;
         const oldCenterImag = (viewport.height - center.y) / viewport.height * oldImagRange + plotBounds.minImag;
         const newRealMin = oldCenterReal - currRealRange * (center.x / viewport.width);
-        const newRealMax = newRealMin + currRealRange;
         const newImagMin = oldCenterImag - currImagRange * (viewport.height - center.y) / viewport.height;
-        const newImagMax = newImagMin + currImagRange;
         plotBounds = {
             minReal: newRealMin,
-            maxReal: newRealMax,
+            realRange: currRealRange,
             minImag: newImagMin,
-            maxImag: newImagMax
+            imagRange: currImagRange,
         };
         updateBoundsInputs();
         refreshPlot();
@@ -147,9 +144,9 @@ viewportForm.addEventListener("submit", (e) => {
     e.preventDefault();
     plotBounds = {
         minReal: parseFloat(minRealInput.value),
-        maxReal: parseFloat(maxRealInput.value),
+        realRange: parseFloat(realRngInput.value),
         minImag: parseFloat(minImagInput.value),
-        maxImag: parseFloat(maxImagInput.value)
+        imagRange: parseFloat(imagRngInput.value)
     };
     plotOptions = {
         useWebWorker: useWorkerBox.checked,

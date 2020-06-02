@@ -1,8 +1,8 @@
 export interface PlotBounds {
     minReal: number;
-    maxReal: number;
+    realRange: number;
     minImag: number;
-    maxImag: number;
+    imagRange: number;
 }
 
 export interface ViewportBounds {

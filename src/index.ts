@@ -1,12 +1,13 @@
 import { setupPlotListeners } from "./controls";
-// import { plotSet, initialize, shiftPlot } from "./plot";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
+import { PlotManager } from "./plot-manager";
 
 let plotOptions: PlotOptions = {
     maxIterations: 100,
     divergenceBound: 4,
     calcMethod: "vanilla-js",
     useWebWorker: true,
+    showRenderChunks: true
 };
 
 const viewport: ViewportBounds = {
@@ -32,6 +33,7 @@ const realRngInput = document.getElementById("real-range") as HTMLInputElement;
 const minImagInput = document.getElementById("min-imag") as HTMLInputElement;
 const imagRngInput = document.getElementById("imag-range") as HTMLInputElement;
 const useWorkerBox = document.getElementById("main-thread") as HTMLInputElement;
+const showRenderBx = document.getElementById("show-render-chunks") as HTMLInputElement;
 const divergeInput = document.getElementById("divergence-bound") as HTMLInputElement;
 const calcSelector = document.getElementById("calculation-type") as HTMLInputElement;
 const numIterInput = document.getElementById("iteration-count") as HTMLInputElement;
@@ -53,7 +55,8 @@ try {
     useWorkerBox.disabled = true;
 }
 
-// const mainThreadContext = mainThCanvas.getContext("2d");
+let plotManager: PlotManager;
+const mainThreadContext = mainThCanvas.getContext("2d")!;
 
 updatePlotOptions();
 updateBoundsInputs();
@@ -62,8 +65,9 @@ function refreshPlot() {
     if(!plotOptions.useWebWorker) {
         mainThCanvas.style.display = "";
         workerCanvas.style.display = "none";
-        // initialize(viewport)
-        // plotSet(mainThreadContext!, plotBounds, viewport, plotOptions);
+
+        plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext)
+        plotManager.plotSet();
     } else {
         mainThCanvas.style.display = "none";
         workerCanvas.style.display = "";
@@ -79,7 +83,7 @@ function refreshPlot() {
 
 function handleShift(shiftX: number, shiftY: number, shiftReal: number, shiftImag: number) {
     if(!plotOptions.useWebWorker) {
-        // shiftPlot(mainThreadContext!, moveReal, moveImag)
+        plotManager.shiftPlot(shiftX, shiftY, shiftReal, shiftImag)
     } else {
         renderWorker.postMessage({
             type: "shift",
@@ -100,9 +104,10 @@ function updateBoundsInputs() {
 
 function updatePlotOptions() {
     useWorkerBox.checked = plotOptions.useWebWorker;
+    showRenderBx.checked = plotOptions.showRenderChunks;
     divergeInput.value = "" + plotOptions.divergenceBound;
     numIterInput.value = "" + plotOptions.maxIterations;
-    calcSelector.value = plotOptions.calcMethod
+    calcSelector.value = plotOptions.calcMethod;
 }
 
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
@@ -140,7 +145,7 @@ function updatePlotOptions() {
     }
 }));
 
-viewportForm.addEventListener("submit", (e) => {
+viewportForm.addEventListener("change", (e) => {
     e.preventDefault();
     plotBounds = {
         minReal: parseFloat(minRealInput.value),
@@ -152,7 +157,8 @@ viewportForm.addEventListener("submit", (e) => {
         useWebWorker: useWorkerBox.checked,
         divergenceBound: parseInt(divergeInput.value),
         calcMethod: calcSelector.value as PlotOptions["calcMethod"],
-        maxIterations: parseInt(numIterInput.value)
+        maxIterations: parseInt(numIterInput.value),
+        showRenderChunks: showRenderBx.checked
     }
     refreshPlot()
 });

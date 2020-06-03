@@ -17,6 +17,7 @@ export interface PlotOptions {
     divergenceBound: number;
     calcMethod: "wasm-single" | "vanilla-js";
     useWebWorker: boolean;
+    showRenderChunks: boolean;
 }
 
 export interface PlotCommand {

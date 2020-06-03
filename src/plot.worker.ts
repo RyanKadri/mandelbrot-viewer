@@ -1,4 +1,4 @@
-import { PlotManager } from "./plot";
+import { PlotManager } from "./plot-manager";
 
 let ctx: OffscreenCanvasRenderingContext2D;
 let plotManager: PlotManager;

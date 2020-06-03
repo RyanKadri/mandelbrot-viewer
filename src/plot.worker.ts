@@ -1,24 +1,16 @@
-import { PlotManager } from "./plot-manager";
+import { plotChunk } from "./plot";
 
-let ctx: OffscreenCanvasRenderingContext2D;
-let plotManager: PlotManager;
-
-globalThis.addEventListener("message", e => {
+self.addEventListener("message", (e: MessageEvent) => {
     if(!e || !e.data) return
     switch(e.data.type) {
-        case "initialize":
-            const canvas: OffscreenCanvas = e.data.canvas;
-            ctx = canvas.getContext("2d")!;
-            break;
         case "plot":
-            const { plotBounds, viewport, plotOptions } = e.data;
-            plotManager = new PlotManager(viewport, plotBounds, plotOptions, ctx);
-            plotManager.plotSet()
+            const { buffer, bounds, chunkSize, options, chunkId } = e.data.payload;
+            plotChunk(buffer, bounds, chunkSize, options);
+            self.postMessage({ type: "chunk-done", buffer, chunkId }, [ buffer.buffer ])
             break;
-        case "shift":
-            const { shiftX, shiftY, shiftReal, shiftImag } = e.data;
-            plotManager.shiftPlot(shiftX, shiftY, shiftReal, shiftImag);
     }
 });
 
-self.postMessage({ type: "ready" })
+self.postMessage({ type: "ready" });
+
+export default null;

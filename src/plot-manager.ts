@@ -1,4 +1,4 @@
-import { plotChunkJs, plotChunkWasm, ChunkSize } from "./plot";
+import { ChunkSize, plotChunk } from "./plot";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 
 export class PlotManager {
@@ -11,12 +11,15 @@ export class PlotManager {
     private viewXOffset: number;
     private viewYOffset: number;
     private chunkSize: ChunkSize;
+    private renderWorker: Worker;
+    private pendingChunks: PlotChunk[] = [];
 
     constructor(
         private viewport: ViewportBounds,
         private plotBounds: PlotBounds,
         private options: PlotOptions,
-        private ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+        private ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        private onReady: () => void
     ) { 
         this.nChunksHoriz = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
         this.nChunksVert = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
@@ -30,7 +33,7 @@ export class PlotManager {
             this.plotChunks.push(rowChunks);
             for(let col = 0; col < this.nChunksHoriz; col++) {
                 rowChunks.push({
-                    data: new ImageData(viewport.chunkSize, viewport.chunkSize),
+                    image: new ImageData(viewport.chunkSize, viewport.chunkSize),
                     top: -this.viewYOffset + row * viewport.chunkSize,
                     left: -this.viewXOffset + col * viewport.chunkSize,
                     dirty: false,
@@ -40,6 +43,24 @@ export class PlotManager {
             }
         }
         this.chunkSize = { height: this.viewport.chunkSize, width: this.viewport.chunkSize }
+        this.renderWorker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
+        this.renderWorker.addEventListener("message", (e) => {
+            switch(e.data.type) {
+                case "chunk-done":
+                    for(const row of this.plotChunks) {
+                        for(const chunk of row) {
+                            if(chunk.id === e.data.chunkId) {
+                                chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
+                                ctx.putImageData(chunk.image, chunk.left, chunk.top);
+                            }
+                        }
+                    }
+                    break;
+                case "ready":
+                    this.onReady()
+                    break;
+            }
+        })
     }
 
     shiftPlot(moveX: number, moveY: number, moveReal: number, moveImag: number) {
@@ -67,6 +88,12 @@ export class PlotManager {
             }
         }
         this.refreshChunkPlacement(this.ctx);
+    }
+
+    close() {
+        if(this.renderWorker) {
+            this.renderWorker.terminate();
+        }
     }
 
     private recenterIfNeeded() {
@@ -118,9 +145,11 @@ export class PlotManager {
     private refreshChunkPlacement(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
         for(const row of this.plotChunks) {
             for(const chunk of row) {
-                ctx.putImageData(chunk.data, chunk.left, chunk.top);
+                if(chunk.image.data.length > 0) {
+                    ctx.putImageData(chunk.image, chunk.left, chunk.top);
+                }
                 if(this.options.showRenderChunks) {
-                    ctx.strokeStyle = "red";
+                    ctx.strokeStyle = "green";
                     ctx.strokeRect(chunk.left, chunk.top, this.viewport.chunkSize, this.viewport.chunkSize);
                     ctx.strokeText(chunk.id, chunk.left + this.viewport.chunkSize / 2, chunk.top + this.viewport.chunkSize / 2)
                 }
@@ -141,10 +170,18 @@ export class PlotManager {
             minImag: chunkMaxImag - ((chunk.top + this.chunkSize.height) * imagStep),
             imagRange: this.plotBounds.imagRange / this.viewport.height * this.chunkSize.height
         }
-        if(this.options.calcMethod === "vanilla-js") {
-            plotChunkJs(chunk.data, bounds, this.chunkSize, this.options);
+        if(!this.options.useWebWorker) {
+            plotChunk(chunk.image.data, this.plotBounds, this.chunkSize, this.options);
+            this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
         } else {
-            plotChunkWasm(chunk.data, bounds, this.chunkSize, this.options);
+            const buffer = chunk.image.data;
+            this.renderWorker.postMessage({ type: "plot", payload: {
+                buffer,
+                bounds,
+                chunkSize: this.chunkSize,
+                options: this.options,
+                chunkId: chunk.id
+            }}, [buffer.buffer]);
         }
     }
     
@@ -168,7 +205,7 @@ export class PlotManager {
 
 
 interface PlotChunk {
-    data: ImageData;
+    image: ImageData;
     top: number;
     left: number;
     dirty: boolean;

@@ -44,17 +44,6 @@ mainThCanvas.width = workerCanvas.width = viewport.width;
 canvasBounds.style.height = `${viewport.height}px`;
 canvasBounds.style.width = `${viewport.width}px`;
 
-const renderWorker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
-
-let offscreenCanvas: OffscreenCanvas;
-try {
-    offscreenCanvas = workerCanvas.transferControlToOffscreen();
-} catch(e) {
-    console.warn("This browser does not support web worker canvas control.")
-    plotOptions.useWebWorker = false;
-    useWorkerBox.disabled = true;
-}
-
 let plotManager: PlotManager;
 const mainThreadContext = mainThCanvas.getContext("2d")!;
 
@@ -62,37 +51,18 @@ updatePlotOptions();
 updateBoundsInputs();
 
 function refreshPlot() {
-    if(!plotOptions.useWebWorker) {
-        mainThCanvas.style.display = "";
-        workerCanvas.style.display = "none";
-
-        plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext)
-        plotManager.plotSet();
-    } else {
-        mainThCanvas.style.display = "none";
-        workerCanvas.style.display = "";
-
-        renderWorker.postMessage({ 
-            type: "plot", 
-            plotBounds, 
-            viewport, 
-            plotOptions
-        });
+    mainThCanvas.style.display = "";
+    workerCanvas.style.display = "none";
+    if(plotManager) {
+        plotManager.close()
     }
+    plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext, () => {
+        plotManager.plotSet();
+    })
 }
 
 function handleShift(shiftX: number, shiftY: number, shiftReal: number, shiftImag: number) {
-    if(!plotOptions.useWebWorker) {
-        plotManager.shiftPlot(shiftX, shiftY, shiftReal, shiftImag)
-    } else {
-        renderWorker.postMessage({
-            type: "shift",
-            shiftX,
-            shiftY,
-            shiftReal,
-            shiftImag
-        })
-    }
+    plotManager.shiftPlot(shiftX, shiftY, shiftReal, shiftImag)
 }
 
 function updateBoundsInputs() {
@@ -163,16 +133,4 @@ viewportForm.addEventListener("change", (e) => {
     refreshPlot()
 });
 
-renderWorker.addEventListener("message", e => {
-    switch(e.data.type) {
-        case "ready":
-            if(offscreenCanvas) {
-                renderWorker.postMessage({
-                    type: "initialize",
-                    canvas: offscreenCanvas
-                }, [ offscreenCanvas ]);
-                refreshPlot();
-                break;            
-            }
-    }
-})
+refreshPlot()

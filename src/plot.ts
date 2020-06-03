@@ -2,17 +2,25 @@ import { Plot } from "../pkg/mandelbrot_calculator";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 import { memory } from "../pkg/mandelbrot_calculator_bg";
 
-export function plotChunkWasm(plotImage: ImageData, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+    if(options.calcMethod === "vanilla-js") {
+        plotChunkJs(data, bounds, chunkSize, options);
+    } else {
+        plotChunkWasm(data, bounds, chunkSize, options);
+    }
+}
+
+export function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     const plot = Plot.new(chunkSize.width, chunkSize.height, plotBounds.minReal, plotBounds.realRange, plotBounds.minImag, plotBounds.imagRange, options.maxIterations, options.divergenceBound);
     console.time("WASM Plot")
     plot.calc_pixels();
     console.timeEnd("WASM Plot")
     const cellsPtr = plot.pixels();
     const pixelArray = new Uint8ClampedArray(memory.buffer, cellsPtr, chunkSize.width * chunkSize.height * 4);
-    plotImage.data.set(pixelArray);
+    buffer.set(pixelArray);
 }
 
-export function plotChunkJs(plotImage: ImageData, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+export function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     console.time("JS Plot")
     const { minReal, realRange, minImag, imagRange } = plot;
     const { height, width } = chunkSize;
@@ -24,7 +32,7 @@ export function plotChunkJs(plotImage: ImageData, plot: PlotBounds, chunkSize: C
         for(let realStep = 0; realStep < width; realStep ++) {
             const realComp = minReal + realStep * realInc;
             const iterations = iterateMandlebrot(realComp, imagComp, options);
-            drawPixel(plotImage, realStep, imagStep, iterations, chunkSize, options);
+            drawPixel(buffer, realStep, imagStep, iterations, chunkSize, options);
         }
     }
     console.timeEnd("JS Plot")
@@ -45,18 +53,18 @@ function iterateMandlebrot(realComp: number, imagComp: number, options: PlotOpti
     return maxIterations
 }
 
-function drawPixel(img: ImageData, realComp: number, imagComp: number, iterations: number, chunkSize: ChunkSize, options: PlotOptions) {
+function drawPixel(img: Uint8ClampedArray, realComp: number, imagComp: number, iterations: number, chunkSize: ChunkSize, options: PlotOptions) {
     const ind = (imagComp * chunkSize.width + realComp) * 4;
     if(iterations < options.maxIterations) {
-        img.data[ind] = 0;
-        img.data[ind + 1] = 0;
-        img.data[ind + 2] = Math.min(128 + iterations, 255);
-        img.data[ind + 3] = 255;
+        img[ind] = 0;
+        img[ind + 1] = 0;
+        img[ind + 2] = Math.min(128 + iterations, 255);
+        img[ind + 3] = 255;
     } else {
-        img.data[ind] = 0;
-        img.data[ind + 1] = 0;
-        img.data[ind + 2] = 0;
-        img.data[ind + 3] = 255;
+        img[ind] = 0;
+        img[ind + 1] = 0;
+        img[ind + 2] = 0;
+        img[ind + 3] = 255;
     }
 }
 

@@ -11,7 +11,7 @@ export class PlotManager {
     private viewXOffset: number;
     private viewYOffset: number;
     private chunkSize: ChunkSize;
-    private renderWorker: Worker;
+    private renderWorkers: Worker[] = [];
     private pendingChunks: PlotChunk[] = [];
 
     constructor(
@@ -19,7 +19,7 @@ export class PlotManager {
         private plotBounds: PlotBounds,
         private options: PlotOptions,
         private ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-        private onReady: () => void
+        private onRenderingChange: (rendering: boolean) => void
     ) { 
         this.nChunksHoriz = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
         this.nChunksVert = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
@@ -37,33 +37,47 @@ export class PlotManager {
                     top: -this.viewYOffset + row * viewport.chunkSize,
                     left: -this.viewXOffset + col * viewport.chunkSize,
                     dirty: false,
-                    id: "" + ind
+                    id: "" + ind,
+                    calculating: false
                 })
                 ind ++;
             }
         }
         this.chunkSize = { height: this.viewport.chunkSize, width: this.viewport.chunkSize }
-        this.renderWorker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
-        this.renderWorker.addEventListener("message", (e) => {
-            switch(e.data.type) {
-                case "chunk-done":
-                    for(const row of this.plotChunks) {
-                        for(const chunk of row) {
-                            if(chunk.id === e.data.chunkId) {
-                                chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
-                                ctx.putImageData(chunk.image, chunk.left, chunk.top);
-                            }
-                        }
-                    }
-                    break;
-                case "ready":
-                    this.onReady()
-                    break;
-            }
-        })
     }
 
-    shiftPlot(moveX: number, moveY: number, moveReal: number, moveImag: number) {
+    async initialize() {
+        let newWorkers: Promise<void>[] = []
+        for(let i = 0; i < this.options.numWorkers; i++) {
+            const worker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
+            const initPromise = new Promise<void>((res) => {
+                worker.addEventListener("message", function listenReady(e: MessageEvent) {
+                    switch(e.data.type) {
+                        case "ready":
+                            worker.removeEventListener("message", listenReady);
+                            res();
+                            break;
+                    }
+                });
+            })
+            this.renderWorkers.push(worker)
+            newWorkers.push(initPromise)
+        }
+        await Promise.all(newWorkers)
+    }
+
+    async updateParams(plotBounds: PlotBounds, options: PlotOptions) {
+        this.plotBounds = plotBounds;
+        this.options = options;
+        this.plotChunks.forEach(row => {
+            row.forEach(chunk => {
+                chunk.dirty = true;
+            })
+        });
+        await this.regenerateDirty();
+    }
+
+    async shiftPlot(moveX: number, moveY: number, moveReal: number, moveImag: number) {
         this.viewXOffset -= moveX;
         this.viewYOffset -= moveY;
         this.plotBounds.minReal -= moveReal;
@@ -75,25 +89,22 @@ export class PlotManager {
             }
         }
         this.recenterIfNeeded();
-        this.regenerateDirty();
-        this.refreshChunkPlacement(this.ctx);
+        await this.regenerateDirty();
     }
 
-    plotSet() {
+    async plotSet() {
         for(let rowInd = 0; rowInd < this.plotChunks.length; rowInd ++) {
             const row = this.plotChunks[rowInd];
             for(let colInd = 0; colInd < row.length; colInd ++) {
                 const chunk = row[colInd];
-                this.plotChunk(chunk)
+                this.pendingChunks.push(chunk);
             }
         }
-        this.refreshChunkPlacement(this.ctx);
+        await this.drainChunkQueue();
     }
 
     close() {
-        if(this.renderWorker) {
-            this.renderWorker.terminate();
-        }
+        (this.renderWorkers || []).forEach(worker => worker.terminate());
     }
 
     private recenterIfNeeded() {
@@ -131,34 +142,55 @@ export class PlotManager {
         this.plotChunks = this.plotChunks.map(row => row.sort((a, b) => a.left - b.left));
     }
 
-    private regenerateDirty() {
+    private async regenerateDirty() {
         for(const row of this.plotChunks) {
             for(const chunk of row) {
-                if(chunk.dirty) {
-                    this.plotChunk(chunk);
-                    chunk.dirty = false;
+                if(chunk.dirty && !chunk.calculating) {
+                    this.pendingChunks.push(chunk);
                 }
             }
         }
+        await this.drainChunkQueue();
     }
 
-    private refreshChunkPlacement(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
+    private refreshChunkPlacement() {
         for(const row of this.plotChunks) {
             for(const chunk of row) {
                 if(chunk.image.data.length > 0) {
-                    ctx.putImageData(chunk.image, chunk.left, chunk.top);
+                    this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
                 }
                 if(this.options.showRenderChunks) {
-                    ctx.strokeStyle = "green";
-                    ctx.strokeRect(chunk.left, chunk.top, this.viewport.chunkSize, this.viewport.chunkSize);
-                    ctx.strokeText(chunk.id, chunk.left + this.viewport.chunkSize / 2, chunk.top + this.viewport.chunkSize / 2)
+                    this.ctx.strokeStyle = "green";
+                    this.ctx.strokeRect(chunk.left, chunk.top, this.viewport.chunkSize, this.viewport.chunkSize);
+                    this.ctx.strokeText(chunk.id, chunk.left + this.viewport.chunkSize / 2, chunk.top + this.viewport.chunkSize / 2)
                 }
             }
         }
         this.drawAxes()
     }
 
-    private plotChunk(chunk: PlotChunk) {
+    private async drainChunkQueue() {
+        this.onRenderingChange(true);
+        const drainingWork = this.renderWorkers.map(worker => this.checkQueue(worker));
+        await Promise.all(drainingWork);
+        this.refreshChunkPlacement();
+        this.onRenderingChange(false);
+    }
+
+    private checkQueue = async (worker: Worker): Promise<void> => {
+        const nextChunk = this.pendingChunks.shift();
+        if(nextChunk) {
+            nextChunk.calculating = true;
+            await this.plotChunk(nextChunk, worker)
+            nextChunk.calculating = false;
+            nextChunk.dirty = false;
+            return this.checkQueue(worker)
+        } else {
+            return Promise.resolve()
+        }
+    }
+
+    private async plotChunk(chunk: PlotChunk, worker: Worker) {
         const realStep = this.plotBounds.realRange / this.viewport.width;
         const imagStep = this.plotBounds.imagRange / this.viewport.height;
         
@@ -171,17 +203,34 @@ export class PlotManager {
             imagRange: this.plotBounds.imagRange / this.viewport.height * this.chunkSize.height
         }
         if(!this.options.useWebWorker) {
-            plotChunk(chunk.image.data, this.plotBounds, this.chunkSize, this.options);
+            plotChunk(chunk.image.data, bounds, this.chunkSize, this.options);
             this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
         } else {
             const buffer = chunk.image.data;
-            this.renderWorker.postMessage({ type: "plot", payload: {
+            worker.postMessage({ type: "plot", payload: {
                 buffer,
                 bounds,
                 chunkSize: this.chunkSize,
                 options: this.options,
                 chunkId: chunk.id
             }}, [buffer.buffer]);
+            await new Promise((res) => {
+                const chunkListener = (e: MessageEvent) => {
+                    if(e.data?.type === "chunk-done") {
+                        for(const row of this.plotChunks) {
+                            for(const chunk of row) {
+                                if(chunk.id === e.data.chunkId) {
+                                    chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
+                                    this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
+                                }
+                            }
+                        }
+                        worker.removeEventListener("message", chunkListener)
+                        res()
+                    }
+                }
+                worker.addEventListener("message", chunkListener)
+            })
         }
     }
     
@@ -209,5 +258,6 @@ interface PlotChunk {
     top: number;
     left: number;
     dirty: boolean;
+    calculating: boolean;
     id: string;
 }

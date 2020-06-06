@@ -7,7 +7,8 @@ let plotOptions: PlotOptions = {
     divergenceBound: 4,
     calcMethod: "vanilla-js",
     useWebWorker: true,
-    showRenderChunks: true
+    showRenderChunks: true,
+    numWorkers: 4
 };
 
 const viewport: ViewportBounds = {
@@ -38,30 +39,33 @@ const divergeInput = document.getElementById("divergence-bound") as HTMLInputEle
 const calcSelector = document.getElementById("calculation-type") as HTMLInputElement;
 const numIterInput = document.getElementById("iteration-count") as HTMLInputElement;
 const viewportForm = document.getElementById("viewport-form") as HTMLFormElement;
+const redrawButton = document.getElementById("redraw-button") as HTMLButtonElement;
+const renderingDot = document.getElementById("render-indicator") as HTMLDivElement;
 
 mainThCanvas.height = workerCanvas.height = viewport.height;
 mainThCanvas.width = workerCanvas.width = viewport.width;
 canvasBounds.style.height = `${viewport.height}px`;
 canvasBounds.style.width = `${viewport.width}px`;
 
-let plotManager: PlotManager;
 const mainThreadContext = mainThCanvas.getContext("2d")!;
-
-updatePlotOptions();
-updateBoundsInputs();
+const plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext, (rendering) => {
+    renderingDot.className = rendering ? "rendering" : "done"
+});
 
 function refreshPlot() {
     mainThCanvas.style.display = "";
     workerCanvas.style.display = "none";
-    if(plotManager) {
-        plotManager.close()
-    }
-    plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext, () => {
-        plotManager.plotSet();
-    })
+    plotManager.updateParams(plotBounds, plotOptions);
 }
 
-function handleShift(shiftX: number, shiftY: number, shiftReal: number, shiftImag: number) {
+function handleShift(shiftX: number, shiftY: number) {
+    const shiftReal = (shiftX / viewport.width) * plotBounds.realRange;
+    const shiftImag = (shiftY / viewport.height) * plotBounds.imagRange;
+    plotBounds = {
+        ...plotBounds,
+        minReal: plotBounds.minReal - shiftReal,
+        minImag: plotBounds.minImag + shiftImag,
+    }
     plotManager.shiftPlot(shiftX, shiftY, shiftReal, shiftImag)
 }
 
@@ -82,15 +86,8 @@ function updatePlotOptions() {
 
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
     onDragUpdate(moveX, moveY) {
-        const moveReal = (moveX / viewport.width) * plotBounds.realRange;
-        const moveImag = (moveY / viewport.height) * plotBounds.imagRange;
-        plotBounds = {
-            ...plotBounds,
-            minReal: plotBounds.minReal - moveReal,
-            minImag: plotBounds.minImag + moveImag,
-        }
         updateBoundsInputs();
-        handleShift(moveX, moveY, moveReal, moveImag);
+        handleShift(moveX, moveY);
     },
     onDragComplete() {
         // refreshPlot();
@@ -128,9 +125,37 @@ viewportForm.addEventListener("change", (e) => {
         divergenceBound: parseInt(divergeInput.value),
         calcMethod: calcSelector.value as PlotOptions["calcMethod"],
         maxIterations: parseInt(numIterInput.value),
-        showRenderChunks: showRenderBx.checked
+        showRenderChunks: showRenderBx.checked,
+        numWorkers: plotOptions.numWorkers
     }
     refreshPlot()
 });
 
-refreshPlot()
+document.addEventListener("keydown", e => {
+    e.preventDefault();
+    switch(e.key) {
+        case "ArrowDown":
+            handleShift(0, -5);
+            break;
+        case "ArrowUp":
+            handleShift(0, 5);
+            break;
+        case "ArrowLeft":
+            handleShift(5, 0);
+            break;
+        case "ArrowRight":
+            handleShift(-5, 0);
+            break;
+    }
+})
+
+redrawButton.addEventListener("click", () => {
+    refreshPlot()
+});
+
+(async function () {
+    updatePlotOptions();
+    updateBoundsInputs();
+    await plotManager.initialize();
+    refreshPlot()
+})()

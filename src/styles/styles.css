@@ -40,3 +40,17 @@ h1 {
     display: block;
     margin-bottom: 8px
 }
+
+#render-indicator {
+    height: 12px;
+    width: 12px;
+    border-radius: 999px;
+}
+
+#render-indicator.rendering {
+    background-color: red;
+}
+
+#render-indicator.done {
+    background-color: green;
+}

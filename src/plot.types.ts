@@ -18,6 +18,7 @@ export interface PlotOptions {
     calcMethod: "wasm-single" | "vanilla-js";
     useWebWorker: boolean;
     showRenderChunks: boolean;
+    numWorkers: number;
 }
 
 export interface PlotCommand {

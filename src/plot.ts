@@ -21,7 +21,6 @@ export function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds,
 }
 
 export function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
-    console.time("JS Plot")
     const { minReal, realRange, minImag, imagRange } = plot;
     const { height, width } = chunkSize;
 
@@ -35,7 +34,6 @@ export function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSi
             drawPixel(buffer, realStep, imagStep, iterations, chunkSize, options);
         }
     }
-    console.timeEnd("JS Plot")
 }
 
 function iterateMandlebrot(realComp: number, imagComp: number, options: PlotOptions): number {

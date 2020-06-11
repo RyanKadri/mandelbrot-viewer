@@ -8,12 +8,7 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
             y: e.clientY
         };
     });
-    canvas.addEventListener("mouseup", e => {
-        const end = {
-            x: e.clientX,
-            y: e.clientY
-        };
-        console.log(`Dragged from ${ printPoint(dragStart!) } to ${ printPoint(end) }`)
+    canvas.addEventListener("mouseup", _ => {
         dragStart = null;
         lastPoint = null;
         cbs.onDragComplete();
@@ -32,12 +27,8 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
     canvas.addEventListener("wheel", e => {
         e.preventDefault();
         console.log(e)
-        cbs.onZoom(e.deltaY < 0 ? 0.9 : 1.1, { x: e.offsetX, y: e.offsetY });
+        cbs.onZoom(1 - e.deltaY / 100, { x: e.offsetX, y: e.offsetY });
     });
-}
-
-function printPoint(p: Point) {
-    return `(${p.x}, ${p.y})`;
 }
 
 interface Point {

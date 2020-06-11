@@ -12,8 +12,8 @@ let plotOptions: PlotOptions = {
 };
 
 const viewport: ViewportBounds = {
-    height: 640,
-    width: 640,
+    height: window.innerHeight,
+    width: window.innerWidth,
     chunkSize: 320,
     renderDistBuffer: 100,
 };
@@ -22,7 +22,7 @@ let plotBounds: PlotBounds = {
     minReal: -1,
     realRange: 0.5,
     minImag: 0,
-    imagRange: 0.5
+    imagRange: 0.5 * window.innerHeight / window.innerWidth
 };
 
 // Some of these names could be better but I noticed they were all the same width too late to stop.
@@ -51,6 +51,8 @@ const mainThreadContext = mainThCanvas.getContext("2d")!;
 const plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThreadContext, (rendering) => {
     renderingDot.className = rendering ? "rendering" : "done"
 });
+
+let targetZoom = 1;
 
 function refreshPlot() {
     mainThCanvas.style.display = "";
@@ -93,10 +95,11 @@ function updatePlotOptions() {
         // refreshPlot();
     },
     onZoom(diff, center) {
+        targetZoom *= diff;
         const oldRealRange = plotBounds.realRange;
         const oldImagRange = plotBounds.imagRange;
-        const currRealRange = oldRealRange * diff;
-        const currImagRange = oldImagRange * diff;
+        const currRealRange = oldRealRange / diff;
+        const currImagRange = oldImagRange / diff;
         const oldCenterReal = center.x / viewport.width * oldRealRange + plotBounds.minReal;
         const oldCenterImag = (viewport.height - center.y) / viewport.height * oldImagRange + plotBounds.minImag;
         const newRealMin = oldCenterReal - currRealRange * (center.x / viewport.width);
@@ -108,7 +111,14 @@ function updatePlotOptions() {
             imagRange: currImagRange,
         };
         updateBoundsInputs();
-        refreshPlot();
+        
+        if(targetZoom > 2) {
+            refreshPlot();
+            targetZoom = 1;
+            mainThCanvas.style.transform = ""
+        } else {
+            mainThCanvas.style.transform = `scale(${targetZoom})`
+        }
     }
 }));
 

@@ -9,7 +9,7 @@ let plotOptions: PlotOptions = {
     useWebWorker: true,
     showRenderChunks: true,
     numWorkers: 4
-};
+}; 
 
 const viewport: ViewportBounds = {
     height: window.innerHeight,

@@ -20,25 +20,44 @@ body {
     top: 8px;
     right: 8px;
     padding: 8px;
-    background: #222;
+    background: #333;
     color: #f0f0f0;
+    border-radius: 2px;
+    min-width: 360px;
 }
 
-#viewport-form > * {
-    display: block;
+#viewport-form > section > label, #viewport-form > section > button {
+    display: flex;
     margin-bottom: 8px
 }
 
 #viewport-form input, #viewport-form select, button {
-    background-color: #444;
+    background-color: #555;
     border: none;
     color: inherit;
+}
+
+#viewport-form h4 {
+    margin: 0;
+}
+
+#viewport-form header {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+} 
+
+#viewport-form input:not([type='checkbox']), #viewport-form select {
+    flex-grow: 1;
+    margin-left: 8px;
 }
 
 #render-indicator {
     height: 12px;
     width: 12px;
     border-radius: 999px;
+    display: inline-block;
+    margin-left: 8px;
 }
 
 #render-indicator.rendering {

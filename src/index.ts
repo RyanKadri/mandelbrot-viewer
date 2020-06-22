@@ -3,7 +3,7 @@ import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 import { PlotManager } from "./plot-manager";
 
 let plotOptions: PlotOptions = {
-    maxIterations: 100,
+    maxIterations: 200,
     divergenceBound: 4,
     calcMethod: "vanilla-js",
     useWebWorker: true,
@@ -25,6 +25,8 @@ let plotBounds: PlotBounds = {
     imagRange: 0.5 * window.innerHeight / window.innerWidth
 };
 
+let showParams = true;
+
 // Some of these names could be better but I noticed they were all the same width too late to stop.
 const mainThCanvas = document.getElementById("plot") as HTMLCanvasElement;
 const workerCanvas = document.getElementById("worker-plot") as HTMLCanvasElement;
@@ -41,6 +43,8 @@ const numIterInput = document.getElementById("iteration-count") as HTMLInputElem
 const viewportForm = document.getElementById("viewport-form") as HTMLFormElement;
 const redrawButton = document.getElementById("redraw-button") as HTMLButtonElement;
 const renderingDot = document.getElementById("render-indicator") as HTMLDivElement;
+const showParamBtn = document.getElementById("toggle-params") as HTMLButtonElement;
+const plotControls = document.getElementById("plot-params") as HTMLDivElement;
 
 mainThCanvas.height = workerCanvas.height = viewport.height;
 mainThCanvas.width = workerCanvas.width = viewport.width;
@@ -52,7 +56,7 @@ const plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThrea
     renderingDot.className = rendering ? "rendering" : "done"
 });
 
-let targetZoom = 1;
+// let targetZoom = 1;
 
 function refreshPlot() {
     mainThCanvas.style.display = "";
@@ -76,6 +80,8 @@ function updateBoundsInputs() {
     realRngInput.value = "" + plotBounds.realRange;
     minImagInput.value = "" + plotBounds.minImag;
     imagRngInput.value = "" + plotBounds.imagRange;
+    showParamBtn.innerText = showParams ? "Hide" : "Show";
+    plotControls.style.display = showParams ? "block" : "none"
 }
 
 function updatePlotOptions() {
@@ -84,6 +90,7 @@ function updatePlotOptions() {
     divergeInput.value = "" + plotOptions.divergenceBound;
     numIterInput.value = "" + plotOptions.maxIterations;
     calcSelector.value = plotOptions.calcMethod;
+
 }
 
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
@@ -95,7 +102,7 @@ function updatePlotOptions() {
         // refreshPlot();
     },
     onZoom(diff, center) {
-        targetZoom *= diff;
+        // targetZoom *= diff;
         const oldRealRange = plotBounds.realRange;
         const oldImagRange = plotBounds.imagRange;
         const currRealRange = oldRealRange / diff;
@@ -111,19 +118,20 @@ function updatePlotOptions() {
             imagRange: currImagRange,
         };
         updateBoundsInputs();
+        refreshPlot()
         
-        if(targetZoom > 2) {
-            refreshPlot();
-            targetZoom = 1;
-            mainThCanvas.style.transform = ""
-        } else {
-            mainThCanvas.style.transform = `scale(${targetZoom})`
-        }
+        // if(targetZoom > 2) {
+        //     refreshPlot();
+        //     targetZoom = 1;
+        //     mainThCanvas.style.transform = ""
+        // } else {
+        //     mainThCanvas.style.transform = `scale(${targetZoom})`
+        // }
     }
 }));
 
-viewportForm.addEventListener("change", (e) => {
-    e.preventDefault();
+viewportForm.addEventListener("change", () => {
+    // e.preventDefault();
     plotBounds = {
         minReal: parseFloat(minRealInput.value),
         realRange: parseFloat(realRngInput.value),
@@ -142,7 +150,6 @@ viewportForm.addEventListener("change", (e) => {
 });
 
 document.addEventListener("keydown", e => {
-    e.preventDefault();
     switch(e.key) {
         case "ArrowDown":
             handleShift(0, -5);
@@ -161,6 +168,11 @@ document.addEventListener("keydown", e => {
 
 redrawButton.addEventListener("click", () => {
     refreshPlot()
+});
+
+showParamBtn.addEventListener("click", () => {
+    showParams = !showParams;
+    updateBoundsInputs();
 });
 
 (async function () {

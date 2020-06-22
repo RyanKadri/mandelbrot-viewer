@@ -11,49 +11,54 @@
                 <canvas id="worker-plot"></canvas>
             </div>
             <form id="viewport-form">
-                <label>
-                    Min Real
-                    <input type="text" id="min-real">
-                </label>
-                <label>
-                    Real Range
-                    <input type="text" id="real-range">
-                </label>
-                <label>
-                    Min Imaginary
-                    <input type="text" id="min-imag">
-                </label>
-                <label>
-                    Imaginary Range
-                    <input type="text" id="imag-range">
-                </label>
-                <label>
-                    Calculate on worker thread(s)
-                    <input type="checkbox" id="main-thread">
-                </label>
-                <label>
-                    Show render chunks
-                    <input type="checkbox" id="show-render-chunks">
-                </label>
-                <label>
-                    Number of iterations
-                    <input type="number" min="1" max="500" id="iteration-count">
-                </label>
-                <label>
-                    Divergence Bound
-                    <input type="text" id="divergence-bound">
-                </label>
-                <label>
-                    Calculation Method
-                    <select id="calculation-type">
-                        <option value="vanilla-js">Plain JS</option>
-                        <option value="wasm-single">Single-Threaded WASM</option>
-                    </select>
-                </label>
-                <button type="button" id="redraw-button">
-                    Redraw
-                </button>
-                <div id="render-indicator"></div>
+                <header>
+                    <h4>Plot Params <div id="render-indicator"></div></h4>
+                    <button type="button" id="toggle-params"></button>
+                </header>
+                <section id="plot-params">
+                    <label>
+                        Min Real
+                        <input type="text" id="min-real">
+                    </label>
+                    <label>
+                        Real Range
+                        <input type="text" id="real-range">
+                    </label>
+                    <label>
+                        Min Imaginary
+                        <input type="text" id="min-imag">
+                    </label>
+                    <label>
+                        Imaginary Range
+                        <input type="text" id="imag-range">
+                    </label>
+                    <label>
+                        Calculate on worker thread(s)
+                        <input type="checkbox" id="main-thread">
+                    </label>
+                    <label>
+                        Show render chunks
+                        <input type="checkbox" id="show-render-chunks">
+                    </label>
+                    <label>
+                        Number of iterations
+                        <input type="text" id="iteration-count">
+                    </label>
+                    <label>
+                        Divergence Bound
+                        <input type="text" id="divergence-bound">
+                    </label>
+                    <label>
+                        Calculation Method
+                        <select id="calculation-type">
+                            <option value="vanilla-js">Plain JS</option>
+                            <option value="wasm-single">Single-Threaded WASM</option>
+                        </select>
+                    </label>
+                    <button type="button" id="redraw-button">
+                        Redraw
+                    </button>
+                </section>
             </form>
         </div>
     </body>

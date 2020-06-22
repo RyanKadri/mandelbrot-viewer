@@ -22,9 +22,9 @@ export class PlotManager {
         private onRenderingChange: (rendering: boolean) => void
     ) { 
         this.nChunksHoriz = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
-        this.nChunksVert = Math.ceil((viewport.width + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
+        this.nChunksVert = Math.ceil((viewport.height + 2 * viewport.renderDistBuffer) / viewport.chunkSize) + 1;
         this.viewXOffset = Math.round(((this.nChunksHoriz - 1) * viewport.chunkSize - viewport.width) / 2)
-        this.viewYOffset = Math.round(((this.nChunksHoriz - 1) * viewport.chunkSize - viewport.height) / 2)
+        this.viewYOffset = Math.round(((this.nChunksVert - 1) * viewport.chunkSize - viewport.height) / 2)
 
         this.plotChunks = [];
         let ind = 0;
@@ -125,15 +125,15 @@ export class PlotManager {
         }
         if(this.viewXOffset < this.viewport.renderDistBuffer) {
             for(const row of this.plotChunks) {
-                const lastRow = row[row.length - 1]
-                lastRow.left -= this.nChunksVert * this.viewport.chunkSize
-                lastRow.dirty = true;
+                const lastCol = row[row.length - 1]
+                lastCol.left -= this.nChunksHoriz * this.viewport.chunkSize
+                lastCol.dirty = true;
             }
             this.viewXOffset += this.viewport.chunkSize;
         } else if(this.viewXOffset > this.chunkSize.width + this.viewport.renderDistBuffer) {
             for(const row of this.plotChunks) {
                 const firstCol = row[0]
-                firstCol.left += this.nChunksVert * this.viewport.chunkSize
+                firstCol.left += this.nChunksHoriz * this.viewport.chunkSize
                 firstCol.dirty = true;
             }
             this.viewXOffset -= this.viewport.chunkSize;
@@ -145,7 +145,7 @@ export class PlotManager {
     private async regenerateDirty() {
         for(const row of this.plotChunks) {
             for(const chunk of row) {
-                if(chunk.dirty && !chunk.calculating) {
+                if(chunk.dirty && !chunk.calculating && !this.pendingChunks.some(pending => pending.id === chunk.id)) {
                     this.pendingChunks.push(chunk);
                 }
             }
@@ -225,7 +225,7 @@ export class PlotManager {
                                 }
                             }
                         }
-                        worker.removeEventListener("message", chunkListener)
+                        // worker.removeEventListener("message", chunkListener);
                         res()
                     }
                 }

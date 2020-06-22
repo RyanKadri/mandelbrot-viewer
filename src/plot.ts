@@ -12,9 +12,7 @@ export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize
 
 export function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     const plot = Plot.new(chunkSize.width, chunkSize.height, plotBounds.minReal, plotBounds.realRange, plotBounds.minImag, plotBounds.imagRange, options.maxIterations, options.divergenceBound);
-    console.time("WASM Plot")
     plot.calc_pixels();
-    console.timeEnd("WASM Plot")
     const cellsPtr = plot.pixels();
     const pixelArray = new Uint8ClampedArray(memory.buffer, cellsPtr, chunkSize.width * chunkSize.height * 4);
     buffer.set(pixelArray);

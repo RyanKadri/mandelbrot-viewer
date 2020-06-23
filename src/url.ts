@@ -15,7 +15,7 @@ export function parseUrl(): [PlotBounds, PlotOptions, ViewportBounds] {
         divergenceBound: parseFloat(params.get("divergenceBound") ?? "" + defaultPlotOptions.divergenceBound),
         maxIterations: parseInt(params.get("maxIterations") ?? "" + defaultPlotOptions.maxIterations, 10),
         numWorkers: defaultPlotOptions.numWorkers,
-        showRenderChunks: params.get("showRenderChunks") !== "false",
+        showRenderChunks: params.get("showRenderChunks") === "true",
         useWebWorker: params.get("useWebWorker") !== "false"
     }
 

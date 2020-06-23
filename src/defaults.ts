@@ -5,7 +5,7 @@ export const defaultPlotOptions: PlotOptions = {
     divergenceBound: 4,
     calcMethod: "optimized-js",
     useWebWorker: true,
-    showRenderChunks: true,
+    showRenderChunks: false,
     numWorkers: 8
 }; 
 

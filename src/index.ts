@@ -38,10 +38,15 @@ const plotManager = new PlotManager(viewport, plotBounds, plotOptions, mainThrea
 
 // let targetZoom = 1;
 
-function refreshPlot() {
+async function refreshPlot() {
     mainThCanvas.style.display = "";
     workerCanvas.style.display = "none";
-    plotManager.updateParams(plotBounds, plotOptions);
+    plotManager.clearPlot();
+    await new Promise(res => setTimeout(res, 0));
+    const timerLabel = `Redraw: ${ plotOptions.calcMethod }`
+    console.time(timerLabel)
+    await plotManager.updateParams(plotBounds, plotOptions);
+    console.timeEnd(timerLabel)
 }
 
 function handleShift(shiftX: number, shiftY: number) {

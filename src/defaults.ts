@@ -3,10 +3,10 @@ import { PlotOptions, ViewportBounds, PlotBounds } from "./plot.types";
 export const defaultPlotOptions: PlotOptions = {
     maxIterations: 200,
     divergenceBound: 4,
-    calcMethod: "vanilla-js",
+    calcMethod: "optimized-js",
     useWebWorker: true,
     showRenderChunks: true,
-    numWorkers: 4
+    numWorkers: 8
 }; 
 
 export const defaultViewport: ViewportBounds = {

@@ -16,7 +16,7 @@ export function parseUrl(): [PlotBounds, PlotOptions, ViewportBounds] {
         maxIterations: parseInt(params.get("maxIterations") ?? "" + defaultPlotOptions.maxIterations, 10),
         numWorkers: defaultPlotOptions.numWorkers,
         showRenderChunks: params.get("showRenderChunks") !== "false",
-        useWebWorker: params.get("useWebWorker") === "true"
+        useWebWorker: params.get("useWebWorker") !== "false"
     }
 
     return [

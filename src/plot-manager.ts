@@ -250,6 +250,11 @@ export class PlotManager {
             this.ctx.fillRect(0, xAxisVert, width, this.axisWidth);
         }
     }
+
+    clearPlot() {
+        this.ctx.fillStyle = "#000086"
+        this.ctx.fillRect(0, 0, this.viewport.width, this.viewport.height)
+    }
 }
 
 

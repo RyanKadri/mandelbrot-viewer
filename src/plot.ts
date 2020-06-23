@@ -1,16 +1,19 @@
 import { Plot } from "../pkg/mandelbrot_calculator";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 import { memory } from "../pkg/mandelbrot_calculator_bg";
+import { z, Complex, add, mult, absSq } from "./complex";
 
 export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
-    if(options.calcMethod === "vanilla-js") {
+    if(options.calcMethod === "optimized-js") {
         plotChunkJs(data, bounds, chunkSize, options);
-    } else {
+    } else if(options.calcMethod === "wasm"){
         plotChunkWasm(data, bounds, chunkSize, options);
+    } else {
+        plotChunkNaiveJS(data, bounds, chunkSize, options)
     }
 }
 
-export function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     const plot = Plot.new(chunkSize.width, chunkSize.height, plotBounds.minReal, plotBounds.realRange, plotBounds.minImag, plotBounds.imagRange, options.maxIterations, options.divergenceBound);
     plot.calc_pixels();
     const cellsPtr = plot.pixels();
@@ -18,7 +21,7 @@ export function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds,
     buffer.set(pixelArray);
 }
 
-export function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     const { minReal, realRange, minImag, imagRange } = plot;
     const { height, width } = chunkSize;
 
@@ -32,6 +35,35 @@ export function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSi
             drawPixel(buffer, realStep, imagStep, iterations, chunkSize, options);
         }
     }
+}
+
+function plotChunkNaiveJS(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+    const { minReal, realRange, minImag, imagRange } = plot;
+    const { height, width } = chunkSize;
+
+    const realInc = realRange / width;
+    const imagInc = imagRange / height;
+    for(let imagStep = 0; imagStep < height; imagStep ++) {
+        const imagComp = minImag + imagRange - imagStep * imagInc;
+        for(let realStep = 0; realStep < width; realStep ++) {
+            const realComp = minReal + realStep * realInc;
+            const zInit = z(realComp, imagComp);
+            const iterations = iterateMandlebrotNaive(zInit, options);
+            drawPixel(buffer, realStep, imagStep, iterations, chunkSize, options);
+        }
+    }
+}
+
+function iterateMandlebrotNaive(coord: Complex, options: PlotOptions): number {
+    let zn = z(0,0);
+    const { maxIterations, divergenceBound } = options;
+    for(let n = 0; n < maxIterations; n++) {
+        zn = add(mult(zn,zn), coord);
+        if(absSq(zn) > divergenceBound) {
+            return n;
+        }
+    }
+    return maxIterations
 }
 
 function iterateMandlebrot(realComp: number, imagComp: number, options: PlotOptions): number {

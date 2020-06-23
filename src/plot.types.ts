@@ -15,7 +15,7 @@ export interface ViewportBounds {
 export interface PlotOptions {
     maxIterations: number;
     divergenceBound: number;
-    calcMethod: "wasm-single" | "vanilla-js";
+    calcMethod: "wasm" | "optimized-js" | "naive-js";
     useWebWorker: boolean;
     showRenderChunks: boolean;
     numWorkers: number;

@@ -67,3 +67,12 @@ body {
 #render-indicator.done {
     background-color: green;
 }
+
+#location-links {
+    display: flex;
+}
+
+#location-links a, #location-links:visited {
+    color: white;
+    margin: 0 8px;
+}

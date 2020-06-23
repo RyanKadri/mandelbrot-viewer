@@ -1,29 +1,9 @@
 import { setupPlotListeners } from "./controls";
-import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 import { PlotManager } from "./plot-manager";
+import { PlotOptions } from "./plot.types";
+import { parseUrl, updateUrl } from "./url";
 
-let plotOptions: PlotOptions = {
-    maxIterations: 200,
-    divergenceBound: 4,
-    calcMethod: "vanilla-js",
-    useWebWorker: true,
-    showRenderChunks: true,
-    numWorkers: 4
-}; 
-
-const viewport: ViewportBounds = {
-    height: window.innerHeight,
-    width: window.innerWidth,
-    chunkSize: 320,
-    renderDistBuffer: 100,
-};
-
-let plotBounds: PlotBounds = {
-    minReal: -1,
-    realRange: 0.5,
-    minImag: 0,
-    imagRange: 0.5 * window.innerHeight / window.innerWidth
-};
+let [plotBounds, plotOptions, viewport] = parseUrl()
 
 let showParams = true;
 
@@ -81,16 +61,12 @@ function updateBoundsInputs() {
     minImagInput.value = "" + plotBounds.minImag;
     imagRngInput.value = "" + plotBounds.imagRange;
     showParamBtn.innerText = showParams ? "Hide" : "Show";
-    plotControls.style.display = showParams ? "block" : "none"
-}
-
-function updatePlotOptions() {
+    plotControls.style.display = showParams ? "block" : "none";
     useWorkerBox.checked = plotOptions.useWebWorker;
     showRenderBx.checked = plotOptions.showRenderChunks;
     divergeInput.value = "" + plotOptions.divergenceBound;
     numIterInput.value = "" + plotOptions.maxIterations;
     calcSelector.value = plotOptions.calcMethod;
-
 }
 
 [mainThCanvas, workerCanvas].forEach(canvas => setupPlotListeners(canvas, {
@@ -99,7 +75,7 @@ function updatePlotOptions() {
         handleShift(moveX, moveY);
     },
     onDragComplete() {
-        // refreshPlot();
+        updateUrl(plotBounds, plotOptions);
     },
     onZoom(diff, center) {
         // targetZoom *= diff;
@@ -118,7 +94,8 @@ function updatePlotOptions() {
             imagRange: currImagRange,
         };
         updateBoundsInputs();
-        refreshPlot()
+        updateUrl(plotBounds, plotOptions);
+        refreshPlot();
         
         // if(targetZoom > 2) {
         //     refreshPlot();
@@ -176,7 +153,6 @@ showParamBtn.addEventListener("click", () => {
 });
 
 (async function () {
-    updatePlotOptions();
     updateBoundsInputs();
     await plotManager.initialize();
     refreshPlot()

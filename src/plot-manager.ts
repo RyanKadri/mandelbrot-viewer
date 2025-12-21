@@ -214,7 +214,7 @@ export class PlotManager {
                 options: this.options,
                 chunkId: chunk.id
             }}, [buffer.buffer]);
-            await new Promise((res) => {
+            await new Promise<void>((res) => {
                 const chunkListener = (e: MessageEvent) => {
                     if(e.data?.type === "chunk-done") {
                         for(const row of this.plotChunks) {

@@ -8,13 +8,15 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vite": "^7.3.0"
+    "vite": "^7.3.0",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build-wasm": "wasm-pack build && echo export const memory = wasm.memory; >> ./pkg/mandelbrot_calculator_bg.js",
+    "build-wasm": "wasm-pack build && echo \"export const memory = wasm.memory;\" >> ./pkg/mandelbrot_calculator.js && echo \"export const memory: any;\" >> ./pkg/mandelbrot_calculator.d.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

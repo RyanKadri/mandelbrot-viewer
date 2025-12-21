@@ -26,8 +26,11 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
     });
     canvas.addEventListener("wheel", e => {
         e.preventDefault();
-        console.log(e)
-        cbs.onZoom(1 - e.deltaY / 100, { x: e.offsetX, y: e.offsetY });
+        // Scrolling up is a negative deltaY. It should correspond to zooming in (higher percent)
+        // each 100 ticks should correspond to an additional zoom in or out of 5%/*  */
+        const zoomFactor = -e.deltaY / 100;
+        const zoomPercent = 1.05 ** zoomFactor 
+        cbs.onZoom(zoomPercent, { x: e.offsetX, y: e.offsetY });
     });
 }
 

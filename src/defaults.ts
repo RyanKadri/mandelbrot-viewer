@@ -2,7 +2,7 @@ import { PlotOptions, ViewportBounds, PlotBounds } from "./plot.types";
 
 export const defaultPlotOptions: PlotOptions = {
     maxIterations: 200,
-    divergenceBound: 4,
+    divergenceBound: 2,
     calcMethod: "optimized-js",
     useWebWorker: true,
     showRenderChunks: false,

@@ -49,7 +49,7 @@ export class PlotManager {
     async initialize() {
         let newWorkers: Promise<void>[] = []
         for(let i = 0; i < this.options.numWorkers; i++) {
-            const worker = new Worker("./bootstrap.worker.ts", { type: 'module', name: "plot-worker" });
+            const worker = new Worker(new URL("./plot.worker.ts", import.meta.url), { type: "module"});
             const initPromise = new Promise<void>((res) => {
                 worker.addEventListener("message", function listenReady(e: MessageEvent) {
                     switch(e.data.type) {

@@ -1,25 +1,25 @@
 import { Plot } from "../pkg/mandelbrot_calculator";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
-import { memory } from "../pkg/mandelbrot_calculator_bg";
+// import { memory } from "../pkg/mandelbrot_calculator";
 import { z, Complex, add, mult, absSq } from "./complex";
 
 export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     if(options.calcMethod === "optimized-js") {
         plotChunkJs(data, bounds, chunkSize, options);
     } else if(options.calcMethod === "wasm"){
-        plotChunkWasm(data, bounds, chunkSize, options);
+        // plotChunkWasm(data, bounds, chunkSize, options);
     } else {
         plotChunkNaiveJS(data, bounds, chunkSize, options)
     }
 }
 
-function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
-    const plot = Plot.new(chunkSize.width, chunkSize.height, plotBounds.minReal, plotBounds.realRange, plotBounds.minImag, plotBounds.imagRange, options.maxIterations, options.divergenceBound);
-    plot.calc_pixels();
-    const cellsPtr = plot.pixels();
-    const pixelArray = new Uint8ClampedArray(memory.buffer, cellsPtr, chunkSize.width * chunkSize.height * 4);
-    buffer.set(pixelArray);
-}
+// function plotChunkWasm(buffer: Uint8ClampedArray, plotBounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
+//     const plot = Plot.new(chunkSize.width, chunkSize.height, plotBounds.minReal, plotBounds.realRange, plotBounds.minImag, plotBounds.imagRange, options.maxIterations, options.divergenceBound);
+//     plot.calc_pixels();
+//     const cellsPtr = plot.pixels();
+//     const pixelArray = new Uint8ClampedArray(memory.buffer, cellsPtr, chunkSize.width * chunkSize.height * 4);
+//     buffer.set(pixelArray);
+// }
 
 function plotChunkJs(buffer: Uint8ClampedArray, plot: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
     const { minReal, realRange, minImag, imagRange } = plot;

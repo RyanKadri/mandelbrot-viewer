@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/src/styles/styles.css">
+        <title>Mandelbrot Set</title>
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container">
+            <div id="plot-bounds">
+                <canvas id="plot"></canvas>
+                <canvas id="worker-plot"></canvas>
+            </div>
+            <form id="viewport-form">
+                <header>
+                    <h4>Plot Params <div id="render-indicator"></div></h4>
+                    <button type="button" id="toggle-params"></button>
+                </header>
+                <section id="plot-params">
+                    <label>
+                        Min Real
+                        <input type="text" id="min-real">
+                    </label>
+                    <label>
+                        Real Range
+                        <input type="text" id="real-range">
+                    </label>
+                    <label>
+                        Min Imaginary
+                        <input type="text" id="min-imag">
+                    </label>
+                    <label>
+                        Imaginary Range
+                        <input type="text" id="imag-range">
+                    </label>
+                    <label>
+                        Calculate on worker thread(s)
+                        <input type="checkbox" id="main-thread">
+                    </label>
+                    <label>
+                        Show render chunks
+                        <input type="checkbox" id="show-render-chunks">
+                    </label>
+                    <label>
+                        Number of iterations
+                        <input type="text" id="iteration-count">
+                    </label>
+                    <label>
+                        Divergence Bound
+                        <input type="text" id="divergence-bound">
+                    </label>
+                    <label>
+                        Calculation Method
+                        <select id="calculation-type">
+                            <option value="naive-js">Naive JS</option>
+                            <option value="optimized-js">Optimized JS</option>
+                            <option value="wasm">WASM</option>
+                        </select>
+                    </label>
+                    <button type="button" id="redraw-button">
+                        Redraw
+                    </button>
+                    <div id="location-links">
+                        <a href="/">Reset</a>
+                        <a href="/?minReal=-1.5&minImag=-0.125">Full Set</a>
+                        <a href="/?minReal=-1.25&realRange=0.0084&minImag=0.085&imagRange=0.0041">Branches</a>
+                    </div>
+                </section>
+            </form>
+        </div>
+        <script type="module" src="/src/bootstrap.ts"></script>
+    </body>
+</html>

@@ -25,6 +25,7 @@ const redrawButton = document.getElementById("redraw-button") as HTMLButtonEleme
 const renderingDot = document.getElementById("render-indicator") as HTMLDivElement;
 const showParamBtn = document.getElementById("toggle-params") as HTMLButtonElement;
 const plotControls = document.getElementById("plot-params") as HTMLDivElement;
+const tooltip = document.getElementById("coordinate-tooltip") as HTMLDivElement;
 
 mainThCanvas.height = workerCanvas.height = viewport.height;
 mainThCanvas.width = workerCanvas.width = viewport.width;
@@ -101,7 +102,7 @@ function updateBoundsInputs() {
         updateBoundsInputs();
         updateUrl(plotBounds, plotOptions);
         refreshPlot();
-        
+
         // if(targetZoom > 2) {
         //     refreshPlot();
         //     targetZoom = 1;
@@ -109,6 +110,28 @@ function updateBoundsInputs() {
         // } else {
         //     mainThCanvas.style.transform = `scale(${targetZoom})`
         // }
+    },
+    onMouseMove(offsetX, offsetY, clientX, clientY) {
+        // Calculate complex coordinates from pixel position
+        const real = (offsetX / viewport.width) * plotBounds.realRange + plotBounds.minReal;
+        const imag = plotBounds.minImag + plotBounds.imagRange - (offsetY / viewport.height) * plotBounds.imagRange;
+
+        // Format coordinates with appropriate precision
+        const precision = -Math.floor(Math.log10(Math.min(plotBounds.realRange, plotBounds.imagRange))) + 2;
+        const realStr = real.toFixed(precision);
+        const imagStr = imag.toFixed(precision);
+
+        // Update tooltip content and position
+        tooltip.textContent = `${realStr} ${imag >= 0 ? '+' : '-'} ${imagStr}i`;
+        tooltip.style.left = `${clientX + 15}px`;
+        tooltip.style.top = `${clientY + 15}px`;
+        tooltip.classList.add('visible');
+    },
+    onMouseLeave() {
+        tooltip.classList.remove('visible');
+    },
+    onMouseEnter() {
+        tooltip.classList.add('visible');
     }
 }));
 

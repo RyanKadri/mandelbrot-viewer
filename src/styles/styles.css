@@ -76,3 +76,23 @@ body {
     color: white;
     margin: 0 8px;
 }
+
+#coordinate-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.1s;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#coordinate-tooltip.visible {
+    opacity: 1;
+}

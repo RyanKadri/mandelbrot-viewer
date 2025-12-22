@@ -4,6 +4,14 @@ import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 export class PlotManager {
 
     private readonly axisWidth = 1;
+    private readonly tickThickness = 1;
+    private readonly tickLength = 10;
+    private readonly axisColor = "red";
+    private readonly axisLabelFont = "14px monospace";
+    private readonly axisMargin = 20;
+    private readonly chunkGridColor = "#99dd44";
+    private readonly chunkLabelFont = "14px monospace";
+
 
     private nChunksHoriz: number;
     private nChunksVert: number;
@@ -160,9 +168,11 @@ export class PlotManager {
                     this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
                 }
                 if(this.options.showRenderChunks) {
-                    this.ctx.strokeStyle = "green";
+                    this.ctx.strokeStyle = this.chunkGridColor;
+                    this.ctx.fillStyle = this.chunkGridColor;
+                    this.ctx.font = this.chunkLabelFont;
                     this.ctx.strokeRect(chunk.left, chunk.top, this.viewport.chunkSize, this.viewport.chunkSize);
-                    this.ctx.strokeText(chunk.id, chunk.left + this.viewport.chunkSize / 2, chunk.top + this.viewport.chunkSize / 2)
+                    this.ctx.fillText(chunk.id, chunk.left + this.viewport.chunkSize / 2, chunk.top + this.viewport.chunkSize / 2)
                 }
             }
         }
@@ -237,18 +247,97 @@ export class PlotManager {
     private drawAxes() {
         const { minReal, realRange, minImag, imagRange } = this.plotBounds;
         const { height, width } = this.viewport;
-        
-        this.ctx.fillStyle = "red";
+
+        this.ctx.fillStyle = this.axisColor;
+        this.ctx.strokeStyle = this.axisColor;
+        this.ctx.font = this.axisLabelFont;
+
         const maxReal = minReal + realRange;
         const maxImag = minImag + imagRange;
-        if(maxReal > 0 && minReal < 0) {
-            const yAxisHoriz = -minReal / (maxReal - minReal) * width;
-            this.ctx.fillRect(yAxisHoriz, 0, this.axisWidth, height);
+
+        const axisMargin = this.axisMargin; // Margin from edge for labels
+
+        // Draw Y-axis on the left edge
+        const yAxisX = axisMargin;
+        this.ctx.fillRect(yAxisX, 0, this.axisWidth, height);
+        this.drawYAxisTicks(yAxisX, minImag, maxImag, height);
+
+        // Draw X-axis on the bottom edge
+        const xAxisY = height - axisMargin;
+        this.ctx.fillRect(0, xAxisY, width, this.axisWidth);
+        this.drawXAxisTicks(xAxisY, minReal, maxReal, width);
+    }
+
+    private drawYAxisTicks(xPos: number, minImag: number, maxImag: number, height: number) {
+        const imagRange = maxImag - minImag;
+        const tickInterval = this.calculateTickInterval(imagRange);
+
+        // Find first tick value
+        const firstTick = Math.ceil(minImag / tickInterval) * tickInterval;
+
+        for(let tick = firstTick; tick <= maxImag; tick += tickInterval) {
+            const yPos = (maxImag - tick) / imagRange * height;
+
+            // Skip ticks that would be too close to edges
+            if (yPos < (this.axisMargin / 2) || yPos > (height - (this.axisMargin + 10))) continue;
+
+            // Draw tick mark
+            this.ctx.fillRect(xPos - this.tickLength / 2, yPos, this.tickLength, this.tickThickness);
+
+            // Draw label to the left of the axis
+            const label = tick.toFixed(this.getDecimalPlaces(tickInterval));
+            this.ctx.fillStyle = "white";
+            this.ctx.textAlign = "left";
+            this.ctx.fillText(label + "i", xPos + 8, yPos + 4);
+            this.ctx.fillStyle = this.axisColor;
         }
-        if(maxImag > 0 && minImag < 0) {
-            const xAxisVert = maxImag / (maxImag - minImag) * height;
-            this.ctx.fillRect(0, xAxisVert, width, this.axisWidth);
+        this.ctx.textAlign = "left"; // Reset to default
+    }
+
+    private drawXAxisTicks(yPos: number, minReal: number, maxReal: number, width: number) {
+        const realRange = maxReal - minReal;
+        const tickInterval = this.calculateTickInterval(realRange);
+
+        // Find first tick value
+        const firstTick = Math.ceil(minReal / tickInterval) * tickInterval;
+
+        for(let tick = firstTick; tick <= maxReal; tick += tickInterval) {
+            const xPos = (tick - minReal) / realRange * width;
+
+            // Skip ticks that would be too close to edges
+            if (xPos < (this.axisMargin + 10) || xPos > (width - this.axisMargin / 2)) continue;
+
+            // Draw tick mark
+            this.ctx.fillRect(xPos, yPos - this.tickLength / 2, this.tickThickness, this.tickLength);
+
+            // Draw label below the axis
+            const label = tick.toFixed(this.getDecimalPlaces(tickInterval));
+            this.ctx.fillStyle = "white";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(label, xPos, yPos - 15);
+            this.ctx.fillStyle = this.axisColor;
         }
+        this.ctx.textAlign = "left"; // Reset to default
+    }
+
+    private calculateTickInterval(range: number): number {
+        // Calculate a nice tick interval based on the range
+        const roughInterval = range / 8; // Aim for about 8 ticks
+        const magnitude = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+        const normalized = roughInterval / magnitude;
+
+        // Choose nice round numbers
+        let niceTick;
+        if (normalized < 1.5) niceTick = 1;
+        else if (normalized < 3) niceTick = 2;
+        else if (normalized < 7) niceTick = 5;
+        else niceTick = 10;
+
+        return niceTick * magnitude;
+    }
+
+    private getDecimalPlaces(interval: number): number {
+        return Math.max(0, -Math.floor(Math.log10(interval)));
     }
 
     clearPlot() {

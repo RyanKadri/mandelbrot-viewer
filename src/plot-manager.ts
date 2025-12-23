@@ -203,7 +203,7 @@ export class PlotManager {
     private async plotChunk(chunk: PlotChunk, worker: Worker) {
         const realStep = this.plotBounds.realRange / this.viewport.width;
         const imagStep = this.plotBounds.imagRange / this.viewport.height;
-        
+
         const chunkMaxImag = this.plotBounds.minImag + this.plotBounds.imagRange;
 
         const bounds: PlotBounds = {
@@ -216,7 +216,11 @@ export class PlotManager {
             plotChunk(chunk.image.data, bounds, this.chunkSize, this.options);
             this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
         } else {
-            const buffer = chunk.image.data;
+            // Check if buffer is already detached, create new one if needed
+            const buffer = chunk.image.data.buffer.byteLength === 0
+                ? new Uint8ClampedArray(this.chunkSize.width * this.chunkSize.height * 4)
+                : chunk.image.data;
+
             worker.postMessage({ type: "plot", payload: {
                 buffer,
                 bounds,
@@ -226,16 +230,10 @@ export class PlotManager {
             }}, [buffer.buffer]);
             await new Promise<void>((res) => {
                 const chunkListener = (e: MessageEvent) => {
-                    if(e.data?.type === "chunk-done") {
-                        for(const row of this.plotChunks) {
-                            for(const chunk of row) {
-                                if(chunk.id === e.data.chunkId) {
-                                    chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
-                                    this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
-                                }
-                            }
-                        }
-                        // worker.removeEventListener("message", chunkListener);
+                    if(e.data?.type === "chunk-done" && e.data.chunkId === chunk.id) {
+                        chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
+                        this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
+                        worker.removeEventListener("message", chunkListener);
                         res()
                     }
                 }

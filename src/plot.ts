@@ -73,8 +73,12 @@ function iterateMandelbrot(realComp: number, imagComp: number, options: PlotOpti
         let newReal = real * real - imag * imag + realComp
         imag = 2 * imag * real + imagComp;
         real = newReal;
-        if(real ** 2 + imag ** 2 > div2) {
-            return n;
+        const magnitudeSq = real ** 2 + imag ** 2;
+        if(magnitudeSq > div2) {
+            // Smooth iteration count using continuous coloring
+            // This adds a fractional part based on how far past the escape radius we went
+            const smoothN = n + 1 - Math.log2(Math.log2(magnitudeSq) / 2);
+            return smoothN;
         }
     }
     return maxIterations
@@ -83,9 +87,20 @@ function iterateMandelbrot(realComp: number, imagComp: number, options: PlotOpti
 function drawPixel(img: Uint8ClampedArray, realComp: number, imagComp: number, iterations: number, chunkSize: ChunkSize, options: PlotOptions) {
     const ind = (imagComp * chunkSize.width + realComp) * 4;
     if(iterations < options.maxIterations) {
-        img[ind] = 0;
-        img[ind + 1] = 0;
-        img[ind + 2] = Math.min(128 + iterations, 255);
+        // Use smooth iteration count for gradient coloring
+        // Apply logarithmic scaling to spread out colors more evenly
+        const t = Math.log(iterations + 1) / Math.log(options.maxIterations + 1);
+
+        // Create a smooth color gradient using sinusoidal functions
+        // This creates smooth bands that blend into each other
+        const hue = t * 360 + 180;
+        const saturation = 0.5;
+        const lightness = t < 0.5 ? 0.4 + t * 0.4 : 0.6 - (t - 0.5) * 0.4;
+
+        const [r, g, b] = hslToRgb(hue, saturation, lightness);
+        img[ind + 0] = r;
+        img[ind + 1] = g;
+        img[ind + 2] = b;
         img[ind + 3] = 255;
     } else {
         img[ind] = 0;
@@ -93,6 +108,28 @@ function drawPixel(img: Uint8ClampedArray, realComp: number, imagComp: number, i
         img[ind + 2] = 0;
         img[ind + 3] = 255;
     }
+}
+
+// Uses some trig hacks that I don't understand apparently
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    h = h / 360;
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+
+    const hueToRgb = (t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+    };
+
+    return [
+        Math.round(hueToRgb(h + 1/3) * 255),
+        Math.round(hueToRgb(h) * 255),
+        Math.round(hueToRgb(h - 1/3) * 255)
+    ];
 }
 
 export type ChunkSize = Pick<ViewportBounds, "height" | "width">

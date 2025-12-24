@@ -17,6 +17,7 @@ const minImagInput = document.getElementById("min-imag") as HTMLInputElement;
 const imagRngInput = document.getElementById("imag-range") as HTMLInputElement;
 const useWorkerBox = document.getElementById("main-thread") as HTMLInputElement;
 const showRenderBx = document.getElementById("show-render-chunks") as HTMLInputElement;
+const useAntialiasBox = document.getElementById("use-antialiasing") as HTMLInputElement;
 const divergeInput = document.getElementById("divergence-bound") as HTMLInputElement;
 const calcSelector = document.getElementById("calculation-type") as HTMLInputElement;
 const numIterInput = document.getElementById("iteration-count") as HTMLInputElement;
@@ -70,6 +71,7 @@ function updateBoundsInputs() {
     plotControls.style.display = showParams ? "block" : "none";
     useWorkerBox.checked = plotOptions.useWebWorker;
     showRenderBx.checked = plotOptions.showRenderChunks;
+    useAntialiasBox.checked = plotOptions.useAntialiasing;
     divergeInput.value = "" + plotOptions.divergenceBound;
     numIterInput.value = "" + plotOptions.maxIterations;
     calcSelector.value = plotOptions.calcMethod;
@@ -149,6 +151,7 @@ viewportForm.addEventListener("change", () => {
         calcMethod: calcSelector.value as PlotOptions["calcMethod"],
         maxIterations: parseInt(numIterInput.value),
         showRenderChunks: showRenderBx.checked,
+        useAntialiasing: useAntialiasBox.checked,
         numWorkers: plotOptions.numWorkers
     }
     refreshPlot()

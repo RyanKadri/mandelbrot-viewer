@@ -19,6 +19,7 @@ export interface PlotOptions {
     useWebWorker: boolean;
     showRenderChunks: boolean;
     numWorkers: number;
+    useAntialiasing: boolean;
 }
 
 export interface PlotCommand {

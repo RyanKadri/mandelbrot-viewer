@@ -6,7 +6,8 @@ export const defaultPlotOptions: PlotOptions = {
     calcMethod: "optimized-js",
     useWebWorker: true,
     showRenderChunks: false,
-    numWorkers: 8
+    numWorkers: 8,
+    useAntialiasing: true
 }; 
 
 export const defaultViewport: ViewportBounds = {

@@ -3,60 +3,46 @@ import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 import { z, Complex, add, mult, absSq } from "./complex";
 
 export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize: ChunkSize, options: PlotOptions) {
-    if (!options.useAntialiasing) {
-        // No antialiasing - render directly
-        if(options.calcMethod === "optimized-js") {
-            plotChunkJs(data, bounds, chunkSize, options);
-        } else if(options.calcMethod === "wasm"){
-            plotChunkWasm(data, bounds, chunkSize, options);
-        } else {
-            plotChunkNaiveJS(data, bounds, chunkSize, options)
-        }
-        return;
-    }
-
-    // Antialiasing: render at 2x resolution then downsample
-    const supersampleFactor = 2;
-    const highResWidth = chunkSize.width * supersampleFactor;
-    const highResHeight = chunkSize.height * supersampleFactor;
-    const highResBuffer = new Uint8ClampedArray(highResWidth * highResHeight * 4);
-    const highResChunk: ChunkSize = { width: highResWidth, height: highResHeight };
-
-    // Render at high resolution
     if(options.calcMethod === "optimized-js") {
-        plotChunkJs(highResBuffer, bounds, highResChunk, options);
+        plotChunkJs(data, bounds, chunkSize, options);
     } else if(options.calcMethod === "wasm"){
-        plotChunkWasm(highResBuffer, bounds, highResChunk, options);
+        plotChunkWasm(data, bounds, chunkSize, options);
     } else {
-        plotChunkNaiveJS(highResBuffer, bounds, highResChunk, options)
+        plotChunkNaiveJS(data, bounds, chunkSize, options)
     }
+}
 
-    // Downsample: average 2x2 blocks into single pixels
-    for (let y = 0; y < chunkSize.height; y++) {
-        for (let x = 0; x < chunkSize.width; x++) {
+export function downsampleColors(highResData: Uint8ClampedArray, outputData: Uint8ClampedArray,
+                                 outputWidth: number, outputHeight: number) {
+    const supersampleFactor = highResData.length / outputData.length;
+    const highResWidth = outputWidth * supersampleFactor;
+    const colorChannels = 4;
+
+    for (let y = 0; y < outputHeight; y++) {
+        for (let x = 0; x < outputWidth; x++) {
             let r = 0, g = 0, b = 0, a = 0;
 
-            // Sample 2x2 block from high-res buffer
+            // Sample supersampleFactor x supersampleFactor block from high-res buffer
             for (let dy = 0; dy < supersampleFactor; dy++) {
                 for (let dx = 0; dx < supersampleFactor; dx++) {
                     const hiX = x * supersampleFactor + dx;
                     const hiY = y * supersampleFactor + dy;
-                    const hiIdx = (hiY * highResWidth + hiX) * 4;
+                    const hiIdx = (hiY * highResWidth + hiX) * colorChannels;
 
-                    r += highResBuffer[hiIdx + 0];
-                    g += highResBuffer[hiIdx + 1];
-                    b += highResBuffer[hiIdx + 2];
-                    a += highResBuffer[hiIdx + 3];
+                    r += highResData[hiIdx + 0];
+                    g += highResData[hiIdx + 1];
+                    b += highResData[hiIdx + 2];
+                    a += highResData[hiIdx + 3];
                 }
             }
 
             // Average and write to output buffer
             const samples = supersampleFactor * supersampleFactor;
-            const outIdx = (y * chunkSize.width + x) * 4;
-            data[outIdx + 0] = r / samples;
-            data[outIdx + 1] = g / samples;
-            data[outIdx + 2] = b / samples;
-            data[outIdx + 3] = a / samples;
+            const outIdx = (y * outputWidth + x) * 4;
+            outputData[outIdx + 0] = r / samples;
+            outputData[outIdx + 1] = g / samples;
+            outputData[outIdx + 2] = b / samples;
+            outputData[outIdx + 3] = a / samples;
         }
     }
 }

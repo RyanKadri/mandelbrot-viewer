@@ -1,4 +1,4 @@
-import { ChunkSize, plotChunk } from "./plot";
+import { ChunkSize, plotChunk, downsampleColors } from "./plot";
 import { PlotBounds, PlotOptions, ViewportBounds } from "./plot.types";
 
 export class PlotManager {
@@ -212,26 +212,51 @@ export class PlotManager {
             minImag: chunkMaxImag - ((chunk.top + this.chunkSize.height) * imagStep),
             imagRange: this.plotBounds.imagRange / this.viewport.height * this.chunkSize.height
         }
+
+        // Determine render size (2x for antialiasing)
+        const supersampleFactor = this.options.useAntialiasing ? 2 : 1;
+        const renderWidth = this.chunkSize.width * supersampleFactor;
+        const renderHeight = this.chunkSize.height * supersampleFactor;
+        const renderSize: ChunkSize = { width: renderWidth, height: renderHeight };
+
         if(!this.options.useWebWorker) {
-            plotChunk(chunk.image.data, bounds, this.chunkSize, this.options);
+            if (this.options.useAntialiasing) {
+                // Render at high resolution
+                const highResBuffer = new Uint8ClampedArray(renderWidth * renderHeight);
+                plotChunk(highResBuffer, bounds, renderSize, this.options);
+
+                // Downsample to final size
+                downsampleColors(highResBuffer, chunk.image.data, this.chunkSize.width, this.chunkSize.height);
+            } else {
+                plotChunk(chunk.image.data, bounds, this.chunkSize, this.options);
+            }
             this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
         } else {
             // Check if buffer is already detached, create new one if needed
+            const bufferSize = renderWidth * renderHeight * 4;
             const buffer = chunk.image.data.buffer.byteLength === 0
-                ? new Uint8ClampedArray(this.chunkSize.width * this.chunkSize.height * 4)
-                : chunk.image.data;
+                ? new Uint8ClampedArray(bufferSize)
+                : (this.options.useAntialiasing
+                    ? new Uint8ClampedArray(bufferSize)
+                    : chunk.image.data);
 
             worker.postMessage({ type: "plot", payload: {
                 buffer,
                 bounds,
-                chunkSize: this.chunkSize,
+                chunkSize: renderSize,
                 options: this.options,
                 chunkId: chunk.id
             }}, [buffer.buffer]);
             await new Promise<void>((res) => {
                 const chunkListener = (e: MessageEvent) => {
                     if(e.data?.type === "chunk-done" && e.data.chunkId === chunk.id) {
-                        chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
+                        if (this.options.useAntialiasing) {
+                            // Downsample the high-res result/*  */
+                            downsampleColors(e.data.buffer, chunk.image.data, this.chunkSize.width, this.chunkSize.height);
+                            chunk.image = new ImageData(chunk.image.data, this.chunkSize.width, this.chunkSize.height);
+                        } else {
+                            chunk.image = new ImageData(e.data.buffer, this.chunkSize.width, this.chunkSize.height);
+                        }
                         this.ctx.putImageData(chunk.image, chunk.left, chunk.top);
                         worker.removeEventListener("message", chunkListener);
                         res()

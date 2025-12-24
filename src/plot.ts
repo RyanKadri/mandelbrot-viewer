@@ -14,7 +14,7 @@ export function plotChunk(data: Uint8ClampedArray, bounds: PlotBounds, chunkSize
 
 export function downsampleColors(highResData: Uint8ClampedArray, outputData: Uint8ClampedArray,
                                  outputWidth: number, outputHeight: number) {
-    const supersampleFactor = highResData.length / outputData.length;
+    const supersampleFactor = Math.sqrt(highResData.length / outputData.length);
     const highResWidth = outputWidth * supersampleFactor;
     const colorChannels = 4;
 

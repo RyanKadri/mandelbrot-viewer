@@ -1,17 +1,40 @@
 let dragStart: Point | null = null;
 let lastPoint: Point | null = null;
+let zoomBoxStart: Point | null = null;
 
 export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks) {
     canvas.addEventListener("mousedown", e => {
-        dragStart = {
-            x: e.clientX,
-            y: e.clientY
-        };
+        if (e.button === 2) {
+            // Right click - start zoom box
+            e.preventDefault();
+            zoomBoxStart = {
+                x: e.offsetX,
+                y: e.offsetY
+            };
+            if (cbs.onZoomBoxStart) {
+                cbs.onZoomBoxStart(e.offsetX, e.offsetY);
+            }
+        } else {
+            // Left click - start drag
+            dragStart = {
+                x: e.clientX,
+                y: e.clientY
+            };
+        }
     });
-    canvas.addEventListener("mouseup", _ => {
-        dragStart = null;
-        lastPoint = null;
-        cbs.onDragComplete();
+    canvas.addEventListener("mouseup", e => {
+        if (e.button === 2 && zoomBoxStart) {
+            // Right click release - complete zoom box
+            e.preventDefault();
+            if (cbs.onZoomBoxEnd) {
+                cbs.onZoomBoxEnd(e.offsetX, e.offsetY);
+            }
+            zoomBoxStart = null;
+        } else {
+            dragStart = null;
+            lastPoint = null;
+            cbs.onDragComplete();
+        }
     });
     canvas.addEventListener("mousemove", e => {
         // Update tooltip position and coordinates
@@ -19,7 +42,12 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
             cbs.onMouseMove(e.offsetX, e.offsetY, e.clientX, e.clientY);
         }
 
-        if(dragStart !== null) {
+        if (zoomBoxStart) {
+            // Drawing zoom box
+            if (cbs.onZoomBoxUpdate) {
+                cbs.onZoomBoxUpdate(e.offsetX, e.offsetY);
+            }
+        } else if(dragStart !== null) {
             if(lastPoint !== null) {
                 cbs.onDragUpdate(e.clientX - lastPoint.x, e.clientY - lastPoint.y);
             }
@@ -38,6 +66,10 @@ export function setupPlotListeners(canvas: HTMLCanvasElement, cbs: PlotCallbacks
         if(cbs.onMouseEnter) {
             cbs.onMouseEnter();
         }
+    });
+    canvas.addEventListener("contextmenu", e => {
+        // Prevent context menu on right click
+        e.preventDefault();
     });
     canvas.addEventListener("wheel", e => {
         e.preventDefault();
@@ -61,4 +93,7 @@ export interface PlotCallbacks {
     onMouseMove?(offsetX: number, offsetY: number, clientX: number, clientY: number): void;
     onMouseLeave?(): void;
     onMouseEnter?(): void;
+    onZoomBoxStart?(startX: number, startY: number): void;
+    onZoomBoxUpdate?(currentX: number, currentY: number): void;
+    onZoomBoxEnd?(endX: number, endY: number): void;
 }

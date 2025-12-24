@@ -27,6 +27,9 @@ const renderingDot = document.getElementById("render-indicator") as HTMLDivEleme
 const showParamBtn = document.getElementById("toggle-params") as HTMLButtonElement;
 const plotControls = document.getElementById("plot-params") as HTMLDivElement;
 const tooltip = document.getElementById("coordinate-tooltip") as HTMLDivElement;
+const zoomBox = document.getElementById("zoom-box") as HTMLDivElement;
+
+let zoomBoxStartPos: { x: number; y: number } | null = null;
 
 mainThCanvas.height = workerCanvas.height = viewport.height;
 mainThCanvas.width = workerCanvas.width = viewport.width;
@@ -134,6 +137,76 @@ function updateBoundsInputs() {
     },
     onMouseEnter() {
         tooltip.classList.add('visible');
+    },
+    onZoomBoxStart(startX, startY) {
+        zoomBoxStartPos = { x: startX, y: startY };
+        zoomBox.style.display = 'block';
+        zoomBox.style.left = `${startX}px`;
+        zoomBox.style.top = `${startY}px`;
+        zoomBox.style.width = '0px';
+        zoomBox.style.height = '0px';
+    },
+    onZoomBoxUpdate(currentX, currentY) {
+        if (!zoomBoxStartPos) return;
+
+        // Calculate width based on current position
+        const width = Math.abs(currentX - zoomBoxStartPos.x);
+
+        // Maintain aspect ratio based on viewport
+        const aspectRatio = viewport.height / viewport.width;
+        const height = width * aspectRatio;
+
+        // Determine box position and size based on drag direction
+        const left = currentX < zoomBoxStartPos.x ? currentX : zoomBoxStartPos.x;
+        const top = currentY < zoomBoxStartPos.y
+            ? zoomBoxStartPos.y - height
+            : zoomBoxStartPos.y;
+
+        zoomBox.style.left = `${left}px`;
+        zoomBox.style.top = `${top}px`;
+        zoomBox.style.width = `${width}px`;
+        zoomBox.style.height = `${height}px`;
+    },
+    onZoomBoxEnd(endX, endY) {
+        if (!zoomBoxStartPos) return;
+
+        zoomBox.style.display = 'none';
+
+        const width = Math.abs(endX - zoomBoxStartPos.x);
+        if (width < 5) {
+            // Too small, ignore
+            zoomBoxStartPos = null;
+            return;
+        }
+
+        const aspectRatio = viewport.height / viewport.width;
+        const height = width * aspectRatio;
+
+        // Calculate box boundaries in screen coordinates
+        const boxLeft = Math.min(zoomBoxStartPos.x, endX);
+        const boxTop = endY < zoomBoxStartPos.y
+            ? zoomBoxStartPos.y - height
+            : zoomBoxStartPos.y;
+        const boxRight = boxLeft + width;
+        const boxBottom = boxTop + height;
+
+        // Convert to complex plane coordinates
+        const newMinReal = (boxLeft / viewport.width) * plotBounds.realRange + plotBounds.minReal;
+        const newMaxReal = (boxRight / viewport.width) * plotBounds.realRange + plotBounds.minReal;
+        const newMaxImag = plotBounds.minImag + plotBounds.imagRange - (boxTop / viewport.height) * plotBounds.imagRange;
+        const newMinImag = plotBounds.minImag + plotBounds.imagRange - (boxBottom / viewport.height) * plotBounds.imagRange;
+
+        plotBounds = {
+            minReal: newMinReal,
+            realRange: newMaxReal - newMinReal,
+            minImag: newMinImag,
+            imagRange: newMaxImag - newMinImag
+        };
+
+        zoomBoxStartPos = null;
+        updateBoundsInputs();
+        updateUrl(plotBounds, plotOptions);
+        refreshPlot();
     }
 }));
 

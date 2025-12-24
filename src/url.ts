@@ -16,7 +16,8 @@ export function parseUrl(): [PlotBounds, PlotOptions, ViewportBounds] {
         maxIterations: parseInt(params.get("maxIterations") ?? "" + defaultPlotOptions.maxIterations, 10),
         numWorkers: defaultPlotOptions.numWorkers,
         showRenderChunks: params.get("showRenderChunks") === "true",
-        useWebWorker: params.get("useWebWorker") !== "false"
+        useWebWorker: params.get("useWebWorker") !== "false",
+        useAntialiasing: params.get("useAntialiasing") === "true"
     }
 
     return [
@@ -31,7 +32,7 @@ const ignoreProps: (keyof PlotBounds | keyof PlotOptions)[] = [
     "numWorkers"
 ];
 
-export function updateUrl(plotBounds: PlotBounds, plotOptions: PlotOptions) {
+export function updateUrl(plotBounds: PlotBounds, plotOptions: PlotOptions, pushState = false) {
     const params = new URLSearchParams();
     [
         ...Object.entries(plotBounds),
@@ -41,5 +42,9 @@ export function updateUrl(plotBounds: PlotBounds, plotOptions: PlotOptions) {
             params.set(key, "" + val)
         }
     });
-    history.replaceState({}, document.title, "?" + params.toString());
+    if(pushState) {
+      history.pushState({}, document.title, "?" + params.toString());
+    } else {
+      history.replaceState({}, document.title, "?" + params.toString());
+    }
 }

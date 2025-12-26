@@ -7,7 +7,31 @@ set -e
 BUCKET_NAME="rk0-mandelbrot"
 DIST_DIR="dist"
 
-echo "Deploying to S3 bucket: $BUCKET_NAME"
+# Check if AWS CLI is installed
+if ! command -v aws &> /dev/null; then
+    echo "Error: AWS CLI is not installed"
+    echo "Install it from: https://aws.amazon.com/cli/"
+    exit 1
+fi
+
+# Check if AWS credentials are configured
+echo "Checking AWS credentials..."
+if ! aws sts get-caller-identity &> /dev/null; then
+    echo "Error: Not logged in to AWS CLI"
+    echo "Run 'aws login'"
+    exit 1
+fi
+
+echo "AWS credentials verified"
+
+# Check if the S3 bucket exists and is accessible
+echo "Checking S3 bucket access..."
+if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+    echo "Error: Cannot access S3 bucket '$BUCKET_NAME'"
+    exit 1
+fi
+
+echo "S3 bucket '$BUCKET_NAME' is accessible"
 
 # Upload index.html to root (overwrite)
 echo "Uploading index.html..."

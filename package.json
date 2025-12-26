@@ -17,6 +17,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "build-wasm": "wasm-pack build && echo \"export const memory = wasm.memory;\" >> ./pkg/mandelbrot_calculator.js && echo \"export const memory: any;\" >> ./pkg/mandelbrot_calculator.d.ts",
+    "build-and-deploy": "npm run build-wasm && npm run build && ./deploy.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

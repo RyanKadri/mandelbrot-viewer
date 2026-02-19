@@ -88,7 +88,16 @@ function updateBoundsInputs() {
     onDragComplete() {
         updateUrl(plotBounds, plotOptions);
     },
+    onTouchZoomUpdate(scale, center) {
+        // Apply CSS scale transform for instant visual feedback during pinch (no re-render)
+        mainThCanvas.style.transformOrigin = `${center.x}px ${center.y}px`;
+        mainThCanvas.style.transform = `scale(${scale})`;
+    },
     onZoom(diff, center) {
+        // Reset any CSS transform applied during touch pinch before re-rendering
+        mainThCanvas.style.transform = "";
+        mainThCanvas.style.transformOrigin = "";
+
         // targetZoom *= diff;
         const oldRealRange = plotBounds.realRange;
         const oldImagRange = plotBounds.imagRange;

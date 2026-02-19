@@ -3,8 +3,9 @@ body {
     margin: 0;
 }
 
-#plot {
+#plot, #worker-plot {
     box-sizing: border-box;
+    touch-action: none;
 }
 
 #plot-bounds {
